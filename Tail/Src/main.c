@@ -55,6 +55,7 @@
 #define RIGHT 'd'
 #define LEFT 'a'
 #define DEL 0x7F
+#define BAUD_RATE 9600
 
 /* USER CODE BEGIN Includes */
 
@@ -285,6 +286,82 @@ void USART3_4_IRQHandler(void) {
 	return;
 }
 
+typedef struct _coors {
+	char x;
+	char y;
+} coors;
+
+// Blocking call to get back the coordinates of the left joystick.
+// A line of the serial input from the controller looks like this: "PS4,<x_coor (0-255)>,<y_coor (0-255)>,...\r\n"
+coors get_left_joystick_coors (void) {
+  char c = 0;
+  char str_start = 0;
+  char on_x = 1;
+  char on_y = 0;
+  char xs[4] = {0, 0, 0, '\0'};
+  char ys[4] = {0, 0, 0, '\0'};
+  char xi = 0;
+  char yi = 0;
+  coors coordinates;
+  while (1) {
+	c = receive_char();
+	// get "PS4" to start line
+	if (str_start < 4) {
+	  switch(c) {
+	  case 'P':
+		str_start++; 
+		break;
+	  case 'S':
+		if (str_start == 1) {
+		  str_start++;
+		}
+		break;
+	  case '4':
+		if (str_start == 2) {
+		  str_start++; 
+		}  
+		break;
+	  case ',':
+		if (str_start == 3) {
+		  str_start++;
+		}
+		break;
+	  }
+	} else {
+	  // get x and y
+	  if (on_x && (c == ',')) {
+		// TODO: If atoi doesn't work, then use this commented out code instead for x and y
+		/* char x_val; */
+		/* if (xi == 1) */
+		/*   x_val = xs[0]; */
+		/* else if (xi == 2) */
+		/*   x_val = xs[0] * 10 + xs[1]; */
+		/* else */
+		/*   x_val = xs[0] * 100 + xs[1] * 10 + xs[2]; */
+		coordinates.x = (char) atoi(xs);
+		xs[0] = 0;
+		xs[1] = 0;
+		xs[2] = 0;
+		on_x = 0;
+		xi = 0;
+	  } else if (on_x) {
+		xs[xi++] = c;
+	  } else if (on_y && (c == ',')) {
+		coordinates.y = (char) atoi(ys);
+		ys[0] = 0;
+		ys[1] = 0;
+		ys[2] = 0;
+		on_y = 0;
+		yi = 0;
+		str_start = 0;
+		return coordinates;
+	  } else {
+		ys[yi++] = c;
+	  }
+	}
+  }
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -321,7 +398,7 @@ int main(void)
 	GPIOC->AFR[0] |= (1<<20 | 1<<16);
 	//GPIOC->AFR[0] &= ~(0xE<<20 | 0xE<<16);
 	// Set the baud rate for communication to be 115200 bits/seconds
-	USART3->BRR = HAL_RCC_GetHCLKFreq()/115200;
+	USART3->BRR = HAL_RCC_GetHCLKFreq()/BAUD_RATE;
 	// Enabling the transmitter and receiver hardware.
 	USART3->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE | USART_CR1_RXNEIE;
 	// Enabling the receive register non empty interupt
