@@ -56,21 +56,35 @@
 #define LEFT 'a'
 #define DEL 0x7F
 #define BAUD_RATE 9600
+#define MAX_Y_ENC_ROTATIONS 4
+#define MAX_X_ENC_ROTATIONS 4
+
+typedef struct _coors {
+	char x;
+	char y;
+} coors;
 
 void SystemClock_Config(void);
 
 /* STATIC GLOBAL VARIABLES */
 volatile static char received_char = 0;
 volatile static uint8_t USART_new_data = 0;
+volatile static int16_t motor_speed = 0;   // Measured motor speed
+volatile static int16_t target_rpm = 0;    // Desired speed target
+volatile static int8_t adc_value = 0;      // ADC measured motor current
+volatile static uint8_t Kp = 8;            // Proportional gain
+volatile static uint8_t Ki = 8;            // Integral gain
+volatile static int8_t x_encoder_rotations = 0;
+volatile static int8_t y_encoder_rotations = 0;
+
+
 
 /* INIT METHODS */
 void LED_init() {
 	// Enable peripheral clock to GPIOC
   RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
 	/* Initializing the LED GPIO pins for the red (PC6), blue (PC7), green (PC8) and orange (PC9) leds */
-	/*  LED PINS INIT BEGIN */
 	GPIOC->MODER |= GPIO_MODER_MODER6_0 | GPIO_MODER_MODER7_0 | GPIO_MODER_MODER8_0 | GPIO_MODER_MODER9_0; 
-	/* LED PINS INIT END */
 	// Setting the pins to general-purpose output mode in the MODER register (low speed)
 	GPIOC->OTYPER &= ~(GPIO_OTYPER_OT_6 | GPIO_OTYPER_OT_7 | GPIO_OTYPER_OT_8 | GPIO_OTYPER_OT_9);                    // Set to push-pull output type
 	GPIOC->OSPEEDR &= ~((GPIO_OSPEEDR_OSPEEDR6_0 | GPIO_OSPEEDR_OSPEEDR6_1) |
@@ -94,6 +108,7 @@ void  button_init() {
     GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_1;                                        // Set to pull-down
 }
 void USART_init() {
+	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
 	RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
 	// Configuring PC4 and PC5 to alternate function mode
 	GPIOC->MODER |= ((1<<9) | (1<<11));	
@@ -154,11 +169,11 @@ void pwm_setDutyCycle(uint8_t duty) {
 void encoder_init(void) {
     /// TODO: Set up encoder input pins (TIMER 3 CH1 and CH2)
 		// PC6 PC7
-		GPIOC->MODER |= (0x2<<14);
-		GPIOC->MODER &= ~(0x1<<14);
-		GPIOC->MODER |= (0x2<<12);
+		GPIOC->MODER |= (0x2<<14); // Setting PC7 to alternate function mode
+		GPIOC->MODER &= ~(0x1<<14); 
+		GPIOC->MODER |= (0x2<<12); // Setting PC6 to alternate function mode.
 		GPIOC->MODER &= ~(0x1<<12);
-		GPIOC->AFR[0] &= ~(0xF<<24);
+	  GPIOC->AFR[0] &= ~(0xF<<24);
 		GPIOC->AFR[0] &= ~(0x7<<28);
     /* Hint: MAKE SURE THAT YOU USE 5V TOLERANT PINS FOR THE ENCODER INPUTS!
      *       You'll fry the processor otherwise, read the lab to find out why!
@@ -200,6 +215,94 @@ void encoder_init(void) {
     NVIC_EnableIRQ(TIM6_DAC_IRQn);          // Enable interrupt in NVIC
     NVIC_SetPriority(TIM6_DAC_IRQn,2);
 }
+void PI_update(void) {
+    /* Run PI control loop
+     *
+     * Make sure to use the indicated variable names. This allows STMStudio to monitor
+     * the condition of the system!
+     *
+     * target_rpm -> target motor speed in RPM
+     * motor_speed -> raw motor speed in encoder counts
+     * error -> error signal (difference between measured speed and target)
+     * error_integral -> integrated error signal
+     * Kp -> Proportional Gain
+     * Ki -> Integral Gain
+     * output -> raw output signal from PI controller
+     * duty_cycle -> used to report the duty cycle of the system
+     * adc_value -> raw ADC counts to report current
+     *
+     */
+		int16_t motor_rpm = motor_speed/2;
+    /// TODO: calculate error signal and write to "error" variable
+		int16_t error = target_rpm - motor_rpm;
+		
+    /* Hint: Remember that your calculated motor speed may not be directly in RPM!
+     *       You will need to convert the target or encoder speeds to the same units.
+     *       I recommend converting to whatever units result in larger values, gives
+     *       more resolution.
+     */
+
+    /// TODO: Calculate integral portion of PI controller, write to "error_integral" variable
+		int16_t error_integral = error_integral + (Ki*error);
+    /// TODO: Clamp the value of the integral to a limited positive range
+		error_integral = error_integral < 3200 ? error_integral : 3200;
+		error_integral = error_integral < 0 ? 0 : error_integral;
+    /* Hint: The value clamp is needed to prevent excessive "windup" in the integral.
+     *       You'll read more about this for the post-lab. The exact value is arbitrary
+     *       but affects the PI tuning.
+     *       Recommend that you clamp between 0 and 3200 (what is used in the lab solution)
+     */
+
+    /// TODO: Calculate proportional portion, add integral and write to "output" variable
+    int16_t output = Kp*error + error_integral; // Change this!
+
+    /* Because the calculated values for the PI controller are significantly larger than
+     * the allowable range for duty cycle, you'll need to divide the result down into
+     * an appropriate range. (Maximum integral clamp / X = 100% duty cycle)
+     *
+     * Hint: If you chose 3200 for the integral clamp you should divide by 32 (right shift by 5 bits),
+     *       this will give you an output of 100 at maximum integral "windup".
+     *
+     * This division also turns the above calculations into pseudo fixed-point. This is because
+     * the lowest 5 bits act as if they were below the decimal point until the division where they
+     * were truncated off to result in an integer value.
+     *
+     * Technically most of this is arbitrary, in a real system you would want to use a fixed-point
+     * math library. The main difference that these values make is the difference in the gain values
+     * required for tuning.
+     */
+
+     /// TODO: Divide the output into the proper range for output adjustment
+		output = output >> 5;
+		
+     /// TODO: Clamp the output value between 0 and 100
+		output = output > 100 ? 100 : output;
+		output = output < 0 ? 0 : output;
+		
+    pwm_setDutyCycle(output);
+
+    // Read the ADC value for current monitoring, actual conversion into meaningful units
+    // will be performed by STMStudio
+    if(ADC1->ISR & ADC_ISR_EOC) {   // If the ADC has new data for us
+        adc_value = ADC1->DR;       // Read the motor current for debug viewing
+    }
+}
+
+// Encoder interrupt to calculate motor speed, also manages PI controller
+void TIM6_DAC_IRQHandler(void) {
+    /* Calculate the motor speed in raw encoder counts
+     * Note the motor speed is signed! Motor can be run in reverse.
+     * Speed is measured by how far the counter moved from center point
+     */
+    motor_speed = (TIM3->CNT - 0x7FFF);
+    TIM3->CNT = 0x7FFF; // Reset back to center point
+
+    // Call the PI update function
+    PI_update();
+
+    TIM6->SR &= ~TIM_SR_UIF;        // Acknowledge the interrupt
+}
+
 void ADC_init(void) {
 
     /// TODO: Configure a pin for ADC input (used for current monitoring)
@@ -434,10 +537,21 @@ void USART3_4_IRQHandler(void) {
 	return;
 }
 
-typedef struct _coors {
-	char x;
-	char y;
-} coors;
+/* METHODS TO STOP THE TAIL FROM MOVING INTO TOO STRESSFULL POSITIONS */
+int proceed_to_rotate_x() {
+	if((x_encoder_rotations < MAX_X_ENC_ROTATIONS) && (x_encoder_rotations > -MAX_X_ENC_ROTATIONS) &&
+		 (y_encoder_rotations < MAX_Y_ENC_ROTATIONS>>1) && (y_encoder_rotations > -MAX_Y_ENC_ROTATIONS>>1)) {
+			 return 1;
+	}
+	return 0;
+}
+int proceed_to_rotate_y() {
+	if((y_encoder_rotations < MAX_Y_ENC_ROTATIONS) && (y_encoder_rotations > -MAX_Y_ENC_ROTATIONS) &&
+		 (x_encoder_rotations < MAX_X_ENC_ROTATIONS>>1) && (x_encoder_rotations > -MAX_X_ENC_ROTATIONS>>1)) {
+			 return 1;
+	}
+	return 0;
+}
 
 // Blocking call to get back the coordinates of the left joystick.
 // A line of the serial input from the controller looks like this: "PS4,<x_coor (0-255)>,<y_coor (0-255)>,...\r\n"
