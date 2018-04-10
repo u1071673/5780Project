@@ -57,29 +57,176 @@
 #define DEL 0x7F
 #define BAUD_RATE 9600
 
-/* USER CODE BEGIN Includes */
-
-/* USER CODE END Includes */
-
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
-
-/* USER CODE END PFP */
-
-/* USER CODE BEGIN 0 */
+/* STATIC GLOBAL VARIABLES */
 volatile static char received_char = 0;
 volatile static uint8_t USART_new_data = 0;
 
+/* INIT METHODS */
+void LED_init() {
+	// Enable peripheral clock to GPIOC
+  RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+	/* Initializing the LED GPIO pins for the red (PC6), blue (PC7), green (PC8) and orange (PC9) leds */
+	/*  LED PINS INIT BEGIN */
+	GPIOC->MODER |= GPIO_MODER_MODER6_0 | GPIO_MODER_MODER7_0 | GPIO_MODER_MODER8_0 | GPIO_MODER_MODER9_0; 
+	/* LED PINS INIT END */
+	// Setting the pins to general-purpose output mode in the MODER register (low speed)
+	GPIOC->OTYPER &= ~(GPIO_OTYPER_OT_6 | GPIO_OTYPER_OT_7 | GPIO_OTYPER_OT_8 | GPIO_OTYPER_OT_9);                    // Set to push-pull output type
+	GPIOC->OSPEEDR &= ~((GPIO_OSPEEDR_OSPEEDR6_0 | GPIO_OSPEEDR_OSPEEDR6_1) |
+											(GPIO_OSPEEDR_OSPEEDR7_0 | GPIO_OSPEEDR_OSPEEDR7_1) |
+											(GPIO_OSPEEDR_OSPEEDR8_0 | GPIO_OSPEEDR_OSPEEDR8_1) |
+											(GPIO_OSPEEDR_OSPEEDR9_0 | GPIO_OSPEEDR_OSPEEDR9_1));   
+	
+	// Set to no pull-up/down
+	GPIOC->PUPDR &= ~((GPIO_PUPDR_PUPDR6_0 | GPIO_PUPDR_PUPDR6_1) |
+										(GPIO_PUPDR_PUPDR7_0 | GPIO_PUPDR_PUPDR7_1) |
+										(GPIO_PUPDR_PUPDR8_0 | GPIO_PUPDR_PUPDR8_1) |
+										(GPIO_PUPDR_PUPDR9_0 | GPIO_PUPDR_PUPDR9_1));
+	// Shut off all LED's
+	GPIOC->ODR &= ~(GPIO_ODR_6 | GPIO_ODR_7 | GPIO_ODR_8 | GPIO_ODR_9); 
+}
+void  button_init() {
+    // Initialize PA0 for button input
+    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;                                          // Enable peripheral clock to GPIOA
+    GPIOA->MODER &= ~(GPIO_MODER_MODER0_0 | GPIO_MODER_MODER0_1);               // Set PA0 to input
+    GPIOC->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEEDR0_0 | GPIO_OSPEEDR_OSPEEDR0_1);     // Set to low speed
+    GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_1;                                        // Set to pull-down
+}
+void USART_init() {
+	RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
+	// Configuring PC4 and PC5 to alternate function mode
+	GPIOC->MODER |= ((1<<9) | (1<<11));	
+	/* Configuring the RX and TX lines to alternate function mode */
+	// AF1 for PC4 (USART3_TX) and PC5 (USART3_RX) // Note: actual installation of cable is backword (PC4 is RX and PC6 is TX)
+	GPIOC->AFR[0] |= (1<<20 | 1<<16);
+	GPIOC->AFR[0] &= ~(0xE<<20 | 0xE<<16);
+	// Set the baud rate for communication to be 115200 bits/seconds
+	USART3->BRR = HAL_RCC_GetHCLKFreq()/BAUD_RATE;
+	// Enabling the transmitter and reciever hardware.
+	USART3->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE | USART_CR1_RXNEIE;
+	// Enabling the receive register non empty interupt
+	NVIC_EnableIRQ(USART3_4_IRQn);
+	NVIC_SetPriority(USART3_4_IRQn, 1);
+}
+// Sets up the PWM and direction signals to drive the H-Bridge
+void pwm_init(void) {
+		//RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+    /// TODO: Set up a pin for H-bridge PWM output (TIMER 14 CH1)
+		// PA4 to AF4 for TIM14 CH1
+		GPIOA->MODER |= (0x2<<8);// AF mode
+		GPIOA->AFR[0] |= (0x4<<16);
+    /// TODO: Set up a few GPIO output pins for direction control
+		// PA1 & PA2 to general purpose output mode
+		GPIOA->MODER |= (0x1<<4) | (0x1<<2);
+    /// TODO: Initialize one direction pin to high, the other low
+		// PA1 = OFF; PA2 = OFF
+		GPIOA->BSRR |= (0x1<<1);
+    /* Hint: These pins are processor outputs, inputs to the H-bridge
+     *       they can be ordinary 3.3v pins.
+     *       If you hook up the motor and the encoder reports you are
+     *       running in reverse, either swap the direction pins or the
+     *       encoder pins. (we'll only be using forward speed in this lab)
+     */
+    // Set up PWM timer
+    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
+    TIM14->CR1 = 0;                         // Clear control registers
+    TIM14->CCMR1 = 0;                       // (prevents having to manually clear bits)
+    TIM14->CCER = 0;
+		
+    // Set output-compare CH1 to PWM1 mode and enable CCR1 preload buffer
+    TIM14->CCMR1 |= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE);
+    TIM14->CCER |= TIM_CCER_CC1E;           // Enable capture-compare channel 1
+    TIM14->PSC = 1;                         // Run timer on 24Mhz
+    TIM14->ARR = 1200;                      // PWM at 20kHz
+    TIM14->CCR1 = 0;                        // Start PWM at 0% duty cycle
+
+    TIM14->CR1 |= TIM_CR1_CEN;              // Enable timer
+}
+// Set the duty cycle of the PWM, accepts (0-100)
+void pwm_setDutyCycle(uint8_t duty) {
+    if(duty <= 100) {
+        TIM14->CCR1 = ((uint32_t)duty*TIM14->ARR)/100;// Use linear transform to produce CCR1 value
+        // (CCR1 == "pulse" parameter in PWM struct used by peripheral library)
+    }
+}
+// Sets up encoder interface to read motor speed
+void encoder_init(void) {
+    /// TODO: Set up encoder input pins (TIMER 3 CH1 and CH2)
+		// PC6 PC7
+		GPIOC->MODER |= (0x2<<14);
+		GPIOC->MODER &= ~(0x1<<14);
+		GPIOC->MODER |= (0x2<<12);
+		GPIOC->MODER &= ~(0x1<<12);
+		GPIOC->AFR[0] &= ~(0xF<<24);
+		GPIOC->AFR[0] &= ~(0x7<<28);
+    /* Hint: MAKE SURE THAT YOU USE 5V TOLERANT PINS FOR THE ENCODER INPUTS!
+     *       You'll fry the processor otherwise, read the lab to find out why!
+     */
+
+    // Set up encoder interface (TIM3 encoder input mode)
+    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+    TIM3->CCMR1 = 0;    //Clear control registers
+    TIM3->CCER = 0;
+    TIM3->SMCR = 0;
+    TIM3->CR1 = 0;
+
+    TIM3->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0);   // TI1FP1 and TI2FP2 signals connected to CH1 and CH2
+    TIM3->SMCR |= (TIM_SMCR_SMS_1 | TIM_SMCR_SMS_0);        // Capture encoder on both rising and falling edges
+    TIM3->ARR = 0xFFFF;                                     // Set ARR to top of timer (longest possible period)
+    TIM3->CNT = 0x7FFF;                                     // Bias at midpoint to allow for negative rotation
+    // (Could also cast unsigned register to signed number to get negative numbers if it rotates backwards past zero
+    //  just another option, the mid-bias is a bit simpler to understand though.)
+    TIM3->CR1 |= TIM_CR1_CEN;                               // Enable timer
+		
+
+    // Configure a second timer (TIM6) to fire an ISR on update event
+    // Used to periodically check and update speed variable
+    RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
+
+    /// TODO: Select PSC and ARR values that give an appropriate interrupt rate
+		
+    /* Hint: See section in lab on sampling rate!
+     *       Recommend choosing a sample rate that gives 2:1 ratio between encoder value
+     *       and target speed. (Example: 200 RPM = 400 Encoder count for interrupt period)
+     *       This is so your system will match the lab solution
+     */
+         TIM6->PSC = 0x0007; // TODO: Change this!
+         TIM6->ARR = 0x927C; // TODO: Change this!
+
+    TIM6->DIER |= TIM_DIER_UIE;             // Enable update event interrupt
+    TIM6->CR1 |= TIM_CR1_CEN;               // Enable Timer
+
+    NVIC_EnableIRQ(TIM6_DAC_IRQn);          // Enable interrupt in NVIC
+    NVIC_SetPriority(TIM6_DAC_IRQn,2);
+}
+void ADC_init(void) {
+
+    /// TODO: Configure a pin for ADC input (used for current monitoring)
+		GPIOA->MODER |= (0x3<<4); // PA2 bits (5:4) ANOLOGUE MODE
+
+    // Configure ADC to 8-bit continuous-run mode, (asynchronous clock mode)
+    RCC->APB2ENR |= RCC_APB2ENR_ADCEN;
+
+    ADC1->CFGR1 = 0;
+    ADC1->CFGR1 |= (ADC_CFGR1_CONT);        // Set to continuous mode and 12-bit resolution
+
+    /// TODO: Enable the proper channel for the ADC pin you are using
+    ADC1->CHSELR |= ADC_CHSELR_CHSEL2; // Change this!
+
+    ADC1->CR = 0;
+    ADC1->CR |= ADC_CR_ADCAL;               // Perform self calibration
+    while(ADC1->CR & ADC_CR_ADCAL);         // Delay until calibration is complete
+
+    ADC1->CR |= ADC_CR_ADEN;                // Enable ADC
+    while(!(ADC1->ISR & ADC_ISR_ADRDY));    // Wait until ADC ready
+    ADC1->CR |= ADC_CR_ADSTART;             // Signal conversion start
+}
+void motor_init(void) {
+    pwm_init();
+    encoder_init();
+    ADC_init();
+}
 void transmit_char(char c) {
 	// Waiting on the USART status flag to indicate the transmit register is empty.
 	//GPIOC->ODR ^= (1<<9) | (1<<8); // DEBUGGER
@@ -175,6 +322,7 @@ void operate_led(char c, uint16_t op){
 	transmit_string(message);
 }
 
+/* USART PROMPT METHODS */
 void led_prompt() {
 	transmit_string("\n\r");
 	transmit_string("LED?\t");
@@ -371,45 +519,13 @@ coors get_left_joystick_coors (void) {
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-  /* USER CODE END 1 */
-
-  /* MCU Configuration----------------------------------------------------------*/
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-  /* USER CODE BEGIN Init */
-  /* USER CODE END Init */
   /* Configure the system clock */
   SystemClock_Config();
-  /* USER CODE BEGIN SysInit */
-	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
-	RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
-	/* Initializing the LED GPIO pins for the red (PC6), blue (PC7), green (PC8) and orange (PC9) leds */
-	/*  LED PINS INIT BEGIN */
-	// Setting the pins to general-purpose output mode in the MODER register
-	GPIOC->MODER |= ((1<<12) | (1<<14) | (1<<16) | (1<<18));
-	// Configuring PC4 and PC5 to alternate function mode
-	GPIOC->MODER |= ((1<<9) | (1<<11));
-  // Setting the pin logic high
-	GPIOC->ODR |= (1<<8);
-	/* LED PINS INIT END */
-	/* Configuring the RX and TX lines to alternate function mode */
-	// AF1 for PC4 (USART3_TX) and PC5 (USART3_RX) // Note actual installation of cable is backword (PC4 is RX and PC6 is TX)
-	GPIOC->AFR[0] |= (1<<20 | 1<<16);
-	//GPIOC->AFR[0] &= ~(0xE<<20 | 0xE<<16);
-	// Set the baud rate for communication to be 115200 bits/seconds
-	USART3->BRR = HAL_RCC_GetHCLKFreq()/BAUD_RATE;
-	// Enabling the transmitter and receiver hardware.
-	USART3->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE | USART_CR1_RXNEIE;
-	// Enabling the receive register non empty interupt
-	NVIC_EnableIRQ(USART3_4_IRQn);
-	NVIC_SetPriority(USART3_4_IRQn, 1);
-  /* USER CODE END SysInit */
-  /* Initialize all configured peripherals */
-  /* USER CODE BEGIN 2 */
-  /* USER CODE END 2 */
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	LED_init();
+	USART_init();
+	button_init();
+	motor_init();
   while (1)
   {
 		USART_new_data = 0;
@@ -458,10 +574,7 @@ int main(void)
 				transmit_char(received_char);
 				break;
 		}
-  /* USER CODE END WHILE */
-  /* USER CODE BEGIN 3 */
   }
-  /* USER CODE END 3 */
 }
 
 /**
