@@ -3,7 +3,7 @@
 <title>Static Call Graph - [Tail\Tail.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image Tail\Tail.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Apr 10 17:55:51 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Apr 10 18:16:45 2018
 <BR><P>
 <H3>Maximum Stack Usage =        164 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -191,7 +191,7 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[2d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_InitTick
 <LI><a href="#[36]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_GetSysClockFreq
-<LI><a href="#[3b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwm_setDutyCycle
+<LI><a href="#[3b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwm_setDutyCycle_y
 <LI><a href="#[40]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART_init
 <LI><a href="#[3d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
 </UL>
@@ -216,7 +216,7 @@ Global Symbols
 <P><STRONG><a name="[5a]"></a>__scatterload_rt2</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, init.o(.text), UNUSED)
 
 <P><STRONG><a name="[50]"></a>ADC_init</STRONG> (Thumb, 82 bytes, Stack size 0 bytes, main.o(i.ADC_init))
-<BR><BR>[Called By]<UL><LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_init
+<BR><BR>[Called By]<UL><LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_init_y
 </UL>
 
 <P><STRONG><a name="[35]"></a>HAL_GetTick</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, stm32f0xx_hal.o(i.HAL_GetTick))
@@ -339,9 +339,9 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f072xb.o(RESET)
 </UL>
 <P><STRONG><a name="[3a]"></a>PI_update</STRONG> (Thumb, 94 bytes, Stack size 8 bytes, main.o(i.PI_update))
-<BR><BR>[Stack]<UL><LI>Max Depth = 28<LI>Call Chain = PI_update &rArr; pwm_setDutyCycle &rArr; __aeabi_uidivmod
+<BR><BR>[Stack]<UL><LI>Max Depth = 28<LI>Call Chain = PI_update &rArr; pwm_setDutyCycle_y &rArr; __aeabi_uidivmod
 </UL>
-<BR>[Calls]<UL><LI><a href="#[3b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwm_setDutyCycle
+<BR>[Calls]<UL><LI><a href="#[3b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwm_setDutyCycle_y
 </UL>
 <BR>[Called By]<UL><LI><a href="#[17]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TIM6_DAC_IRQHandler
 </UL>
@@ -378,7 +378,7 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f072xb.o(.text)
 </UL>
 <P><STRONG><a name="[17]"></a>TIM6_DAC_IRQHandler</STRONG> (Thumb, 36 bytes, Stack size 8 bytes, main.o(i.TIM6_DAC_IRQHandler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 36<LI>Call Chain = TIM6_DAC_IRQHandler &rArr; PI_update &rArr; pwm_setDutyCycle &rArr; __aeabi_uidivmod
+<BR><BR>[Stack]<UL><LI>Max Depth = 36<LI>Call Chain = TIM6_DAC_IRQHandler &rArr; PI_update &rArr; pwm_setDutyCycle_y &rArr; __aeabi_uidivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[3a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PI_update
 </UL>
@@ -420,12 +420,12 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[45]"></a>encoder_init</STRONG> (Thumb, 160 bytes, Stack size 8 bytes, main.o(i.encoder_init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = encoder_init
+<P><STRONG><a name="[45]"></a>encoder_init_y</STRONG> (Thumb, 160 bytes, Stack size 8 bytes, main.o(i.encoder_init_y))
+<BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = encoder_init_y
 </UL>
 <BR>[Calls]<UL><LI><a href="#[41]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;NVIC_SetPriority
 </UL>
-<BR>[Called By]<UL><LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_init
+<BR>[Called By]<UL><LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_init_y
 </UL>
 
 <P><STRONG><a name="[49]"></a>free</STRONG> (Thumb, 80 bytes, Stack size 8 bytes, malloc.o(i.free))
@@ -454,7 +454,7 @@ Global Symbols
 <LI><a href="#[43]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transmit_string
 <LI><a href="#[44]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transmit_char
 <LI><a href="#[4e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;operation_prompt
-<LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_init
+<LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_init_y
 <LI><a href="#[46]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;led_prompt
 <LI><a href="#[42]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;controller_prompt
 <LI><a href="#[4c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;button_init
@@ -470,11 +470,11 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[47]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;receive_string
 </UL>
 
-<P><STRONG><a name="[4d]"></a>motor_init</STRONG> (Thumb, 16 bytes, Stack size 8 bytes, main.o(i.motor_init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = motor_init &rArr; encoder_init
+<P><STRONG><a name="[4d]"></a>motor_init_y</STRONG> (Thumb, 16 bytes, Stack size 8 bytes, main.o(i.motor_init_y))
+<BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = motor_init_y &rArr; encoder_init_y
 </UL>
-<BR>[Calls]<UL><LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwm_init
-<LI><a href="#[45]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;encoder_init
+<BR>[Calls]<UL><LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwm_init_y
+<LI><a href="#[45]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;encoder_init_y
 <LI><a href="#[50]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ADC_init
 </UL>
 <BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
@@ -500,12 +500,12 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[4f]"></a>pwm_init</STRONG> (Thumb, 92 bytes, Stack size 0 bytes, main.o(i.pwm_init))
-<BR><BR>[Called By]<UL><LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_init
+<P><STRONG><a name="[4f]"></a>pwm_init_y</STRONG> (Thumb, 92 bytes, Stack size 0 bytes, main.o(i.pwm_init_y))
+<BR><BR>[Called By]<UL><LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_init_y
 </UL>
 
-<P><STRONG><a name="[3b]"></a>pwm_setDutyCycle</STRONG> (Thumb, 22 bytes, Stack size 8 bytes, main.o(i.pwm_setDutyCycle))
-<BR><BR>[Stack]<UL><LI>Max Depth = 20<LI>Call Chain = pwm_setDutyCycle &rArr; __aeabi_uidivmod
+<P><STRONG><a name="[3b]"></a>pwm_setDutyCycle_y</STRONG> (Thumb, 22 bytes, Stack size 8 bytes, main.o(i.pwm_setDutyCycle_y))
+<BR><BR>[Stack]<UL><LI>Max Depth = 20<LI>Call Chain = pwm_setDutyCycle_y &rArr; __aeabi_uidivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[30]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uidivmod
 </UL>
@@ -556,7 +556,7 @@ Local Symbols
 </UL>
 
 <P><STRONG><a name="[41]"></a>NVIC_SetPriority</STRONG> (Thumb, 60 bytes, Stack size 0 bytes, main.o(i.NVIC_SetPriority))
-<BR><BR>[Called By]<UL><LI><a href="#[45]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;encoder_init
+<BR><BR>[Called By]<UL><LI><a href="#[45]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;encoder_init_y
 <LI><a href="#[40]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART_init
 </UL>
 <P>
