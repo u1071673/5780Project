@@ -50,6 +50,7 @@
 #define CONTROLLER '1'
 #define OPERATION '2'
 #define LED_MODE '3'
+#define BLUETOOTH '4'
 #define UP 'w'
 #define DOWN 's'
 #define RIGHT 'd'
@@ -60,8 +61,8 @@
 #define MAX_X_ENC_ROTATIONS 4
 
 typedef struct _coors {
-	char x;
-	char y;
+	unsigned char x;
+	unsigned char y;
 } coors;
 
 void SystemClock_Config(void);
@@ -556,73 +557,56 @@ int proceed_to_rotate_y() {
 
 // Blocking call to get back the coordinates of the left joystick.
 // A line of the serial input from the controller looks like this: "PS4,<x_coor (0-255)>,<y_coor (0-255)>,...\r\n"
-coors get_left_joystick_coors (void) {
-  char c = 0;
-  char str_start = 0;
-  char on_x = 1;
-  char on_y = 0;
-  char xs[4] = {0, 0, 0, '\0'};
-  char ys[4] = {0, 0, 0, '\0'};
-  char xi = 0;
-  char yi = 0;
-  coors coordinates;
-  while (1) {
-	c = receive_char();
-	// get "PS4" to start line
-	if (str_start < 4) {
-	  switch(c) {
-	  case 'P':
-		str_start++; 
-		break;
-	  case 'S':
-		if (str_start == 1) {
-		  str_start++;
+void get_left_joystick_coors (coors* coordinates) {
+	char c;
+	char str_index = 0;
+	char err = 0;
+	char on_x = 1;
+	char xs[4] = {'\0', '\0', '\0', '\0'};
+	char ys[4] = {'\0', '\0', '\0', '\0'};
+	char i = 0;
+	while (1) {
+		if (err)
+			break;
+		c = receive_char();
+		if ((str_index == 0) && c == 'P') {
+			str_index++;
+		} else if ((str_index == 1) && c == 'S') {
+			str_index++;
+		} else if ((str_index == 2) && c == '4') {
+			str_index++;
+		} else if ((str_index == 3) && c == ',') {
+			str_index++;
+		} else if (str_index > 3) {
+			if (i > 3)
+					err = 1;
+			if (on_x) {
+				if (c == ',') {
+					coordinates->x = atoi(xs);
+					on_x = 0;
+					i = 0;
+				} else if ((c >= '0') && (c <= '9')) {
+					xs[i] = c;
+					i++;
+				} else {
+					err = 1;
+				}
+			} else {
+				if (c == ',') {
+					coordinates->y = atoi(ys);
+					break;
+				} else if ((c >= '0') && (c <= '9')) {
+					ys[i] = c;
+					i++;
+				} else {
+					err = 1;
+				}
+			}
+			str_index++;
 		}
-		break;
-	  case '4':
-		if (str_start == 2) {
-		  str_start++; 
-		}  
-		break;
-	  case ',':
-		if (str_start == 3) {
-		  str_start++;
-		}
-		break;
-	  }
-	} else {
-	  // get x and y
-	  if (on_x && (c == ',')) {
-		// TODO: If atoi doesn't work, then use this commented out code instead for x and y
-		/* char x_val; */
-		/* if (xi == 1) */
-		/*   x_val = xs[0]; */
-		/* else if (xi == 2) */
-		/*   x_val = xs[0] * 10 + xs[1]; */
-		/* else */
-		/*   x_val = xs[0] * 100 + xs[1] * 10 + xs[2]; */
-		coordinates.x = (char) atoi(xs);
-		xs[0] = 0;
-		xs[1] = 0;
-		xs[2] = 0;
-		on_x = 0;
-		xi = 0;
-	  } else if (on_x) {
-		xs[xi++] = c;
-	  } else if (on_y && (c == ',')) {
-		coordinates.y = (char) atoi(ys);
-		ys[0] = 0;
-		ys[1] = 0;
-		ys[2] = 0;
-		on_y = 0;
-		yi = 0;
-		str_start = 0;
-		return coordinates;
-	  } else {
-		ys[yi++] = c;
-	  }
 	}
-  }
+	if (err)
+		transmit_char('E');
 }
 
 /* USER CODE END 0 */
@@ -641,6 +625,7 @@ int main(void)
 	USART_init();
 	button_init();
 	motor_init_y();
+	coors coordinates;
   while (1)
   {
 		USART_new_data = 0;
@@ -650,6 +635,7 @@ int main(void)
 		transmit_string("\n\r1 TAIL Controller Mode");
 		transmit_string("\n\r2 TAIL Operation Mode");
 		transmit_string("\n\r3 LED COLOR Mode");
+		transmit_string("\n\r4 BLUETOOTH Mode");
 		transmit_string("\n\r");
 		while(!USART_new_data); // Wait for USART new data to arrive
 		switch(received_char) {
@@ -669,6 +655,25 @@ int main(void)
 				transmit_string("\tLED COLOR Mode SELECTED");
 				led_prompt();
 				break;
+			case BLUETOOTH:
+				// Disable USART interrupts b/c there would be too many from constant char stream
+				NVIC_DisableIRQ(USART3_4_IRQn);
+				transmit_string("\tBLUETOOTH Mode SELECTED\n\r");
+				while (1) {
+					get_left_joystick_coors(&coordinates);
+					if (coordinates.x <= 50)
+						transmit_char('L');
+					else if (coordinates.x <= 200)
+						transmit_char('M');
+					else
+						transmit_char('R');
+					if (coordinates.y <= 50)
+						transmit_char('T');
+					else if (coordinates.y <= 200)
+						transmit_char('C');
+					else
+						transmit_char('B');
+				}
 			case UP:
 				transmit_string("\tUP Pressed");
 				break;
