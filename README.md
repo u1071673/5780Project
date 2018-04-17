@@ -7,21 +7,21 @@ John Young
 
 
 # Pin Assignments
-PC4:    USART3_TX
-PC5:    USART3_RX
+PC4:    USART3_TX (RXD)
+PC5:    USART3_RX (TXD)
 PC8:    Orange LED
 PC9:    Green LED
 PA0:    Button
-PB5:    MOTOR Y - PWM DIR A (IN1)
-PB6:    MOTOR Y - PWM DIR B (IN2)
-PA4:    MOTOR Y - PWM Enable (TIMER 14 CH1)
-PC6:    MOTOR Y - Encoder A Output (TIMER 3 CH1 AND CH2)
-PC7:    MOTOR Y - Encoder B Output (TIMER 3 CH1 AND CH2)
-PB3:    MOTOR X - PWM DIR A (IN1)
-PB4:    MOTOR X - PWM DIR B (IN2)
-TBA:    MOTOR X - PWM Enable (TIMER X CH1)
-PA8:    MOTOR X - Encoder A Output (TIMER 1 CH1 AND CH2)
-PA9:    MOTOR X - Encoder B Output (TIMER 1 CH1 AND CH2)
+PB5:    MOTOR Y - PWM output (IN1)
+PB6:    MOTOR Y - PWM output (IN2)
+PA4:    MOTOR Y - PWM TIMER 14 CH1 (ENABLE)
+PC7:    MOTOR Y - Encoder Input TIMER 3 CH2 (ENC A)
+PC6:    MOTOR Y - Encoder Input TIMER 3 CH1 (ENC B)
+PB3:    MOTOR X - PWM output (IN1)
+PB4:    MOTOR X - PWM output (IN2)
+PB9:    MOTOR X - PWM TIMER 17 CH1 (ENABLE)
+PA9:    MOTOR X - Encoder Input TIMER 1 CH2 (ENC A)
+PA8:    MOTOR X - Encoder Input TIMER 1 CH1 (ENC B)
 
 DON'T USE THESE PINS THEY DON'T WORK!!!: PA2, PA3, PA6, PA7, PB0, PB1
 

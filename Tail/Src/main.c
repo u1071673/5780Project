@@ -39,6 +39,7 @@
 #include "main.h"
 #include "stm32f0xx_hal.h"
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 /* Custom Macros */
@@ -57,8 +58,35 @@
 #define LEFT 'a'
 #define DEL 0x7F
 #define BAUD_RATE 9600
-#define MAX_Y_ENC_ROTATIONS 4
-#define MAX_X_ENC_ROTATIONS 4
+#define MAX_Y_ENC_ROTATIONS 40
+#define MAX_X_ENC_ROTATIONS 40
+
+volatile int16_t error_integral_y = 0;    // Integrated error signal
+volatile int16_t error_integral_x = 0;    // Integrated error signal
+
+/* -------------------------------------------------------------------------------------------------------------
+ *  Global Variables for Debug Viewing (no real purpose to be global otherwise)
+ * -------------------------------------------------------------------------------------------------------------
+ */
+volatile int16_t motor_speed_y = 0;   // Measured motor speed 
+volatile int16_t motor_speed_x = 0;   // Measured motor speed 
+volatile uint8_t duty_cycle_y = 0;    // Output PWM duty cycle
+volatile uint8_t duty_cycle_x = 0;    // Output PWM duty cycle
+volatile int16_t target_rpm_y = 0;    // Desired speed target
+volatile int16_t target_rpm_x = 0;    // Desired speed target
+volatile int16_t error_y = 0;         // Speed error signal
+volatile int16_t error_x = 0;         // Speed error signal
+volatile uint8_t Kp_y = 8;            // Proportional gain
+volatile uint8_t Kp_x = 8;            // Proportional gain
+volatile uint8_t Ki_y = 8;            // Integral gain
+volatile uint8_t Ki_x = 8;            // Integral gain
+volatile int8_t dir_up = 0;
+volatile int8_t dir_right = 0;
+volatile float rotations_y = 0;
+volatile float rotations_x = 0;
+
+
+
 
 typedef struct _coors {
 	unsigned char x;
@@ -70,16 +98,35 @@ void SystemClock_Config(void);
 /* STATIC GLOBAL VARIABLES */
 volatile static char received_char = 0;
 volatile static uint8_t USART_new_data = 0;
-volatile static int16_t y_motor_speed = 0;   // Measured motor speed
-volatile static int16_t y_target_rpm = 0;    // Desired speed target
-volatile static int8_t y_adc_value = 0;      // ADC measured motor current
-volatile static uint8_t y_Kp = 8;            // Proportional gain
-volatile static uint8_t y_Ki = 8;            // Integral gain
-volatile static int8_t x_encoder_rotations = 0;
-volatile static int8_t y_encoder_rotations = 0;
-volatile static uint8_t x_rotating_right = 0;
-volatile static uint8_t y_rotating_up = 0;
 
+// Counter Clock wise
+void y_dir_down(void) {
+	  GPIOB->ODR |= (1<<5);
+	  GPIOB->ODR &= ~(1<<6); 
+		error_integral_y = 0;
+		dir_up = 0;
+}
+// Clock wise
+void y_dir_up(void) {
+	  GPIOB->ODR &= ~(1<<5);
+    GPIOB->ODR |= (1<<6);
+		error_integral_y = 0;
+		dir_up = 1;
+}
+// Counter Clock wise
+void x_dir_left(void) {
+		GPIOB->ODR |= (1<<3);
+		GPIOB->ODR &= ~(1<<4);
+		error_integral_x = 0;
+		dir_right = 0;
+}
+// Clock wise
+void x_dir_right(void) {
+		GPIOB->ODR &= ~(1<<3);
+		GPIOB->ODR |= (1<<4);
+		error_integral_x = 0;
+		dir_right = 1;
+}
 
 /* INIT METHODS */
 void LED_init() {
@@ -126,31 +173,56 @@ void USART_init() {
 	NVIC_EnableIRQ(USART3_4_IRQn);
 	NVIC_SetPriority(USART3_4_IRQn, 1);
 }
+
 // Sets up the PWM and direction signals to drive the H-Bridge
-void pwm_init_y(void) {
-		//RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
-    /// TODO: Set up a pin for H-bridge PWM output (TIMER 14 CH1)
+void pwm_init(void) {
+		/*________________________________________MOTOR Y________________________________________ */
+		RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+    //  Set up a pin for H-bridge PWM output (TIMER 14 CH1)
 		// PA4 to AF4 for TIM14 CH1
 		GPIOA->MODER |= (0x2<<8);// AF mode
 		GPIOA->AFR[0] |= (0x4<<16);
-    /// TODO: Set up a few GPIO output pins for direction control
-		// PA1 & PA2 to general purpose output mode
-		GPIOA->MODER |= (0x1<<4) | (0x1<<2);
-    /// TODO: Initialize one direction pin to high, the other low
-		// PA1 = OFF; PA2 = OFF
-		GPIOA->BSRR |= (0x1<<1);
-    /* Hint: These pins are processor outputs, inputs to the H-bridge
+    //  Set up a few GPIO output pins for direction control
+		//PB5 & PB6 to general purpose output mode
+		RCC->AHBENR |= RCC_AHBENR_GPIOBEN; 
+		GPIOB->MODER &= ~(0xF<<10);
+		GPIOB->MODER |= (0x1<<12) | (0x1<<10);
+    //  Initialize one direction pin to high, the other low
+		y_dir_up();
+		/* Hint: These pins are processor outputs, inputs to the H-bridge
      *       they can be ordinary 3.3v pins.
      *       If you hook up the motor and the encoder reports you are
      *       running in reverse, either swap the direction pins or the
      *       encoder pins. (we'll only be using forward speed in this lab)
      */
+	
+		/*________________________________________MOTOR X________________________________________ */
+    //  Set up a pin for H-bridge PWM output (TIMER 17 CH1)
+		//  PB9 to AF2 for TIM17 CH1
+		GPIOB->MODER &= ~(0x3<<18); // AF mode
+		GPIOB->MODER |= (0x2<<18);  // AF mode
+		GPIOB->AFR[1] &= ~(0xF<<4);
+		GPIOB->AFR[1] |= (0x2<<4);
+    //  Set up a few GPIO output pins for direction control
+		// PB3 & PB4
+		RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+		GPIOB->MODER &= ~(0xF<<6);
+		GPIOB->MODER |= (0x5<<6);
+		//  Initialize one direction pin to high, the other low
+		x_dir_right();
+		/* Hint: These pins are processor outputs, inputs to the H-bridge
+     *       they can be ordinary 3.3v pins.
+     *       If you hook up the motor and the encoder reports you are
+     *       running in reverse, either swap the direction pins or the
+     *       encoder pins. (we'll only be using forward speed in this lab)
+     */
+		
+		/*________________________________________MOTOR Y________________________________________ */
     // Set up PWM timer
     RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
     TIM14->CR1 = 0;                         // Clear control registers
     TIM14->CCMR1 = 0;                       // (prevents having to manually clear bits)
     TIM14->CCER = 0;
-		
     // Set output-compare CH1 to PWM1 mode and enable CCR1 preload buffer
     TIM14->CCMR1 |= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE);
     TIM14->CCER |= TIM_CCER_CC1E;           // Enable capture-compare channel 1
@@ -159,23 +231,40 @@ void pwm_init_y(void) {
     TIM14->CCR1 = 0;                        // Start PWM at 0% duty cycle
 
     TIM14->CR1 |= TIM_CR1_CEN;              // Enable timer
-}
-// Set the duty cycle of the PWM, accepts (0-100)
-void pwm_setDutyCycle_y(uint8_t duty) {
-    if(duty <= 100) {
-        TIM14->CCR1 = ((uint32_t)duty*TIM14->ARR)/100;// Use linear transform to produce CCR1 value
-        // (CCR1 == "pulse" parameter in PWM struct used by peripheral library)
-    }
+		
+		/*________________________________________MOTOR X________________________________________ */
+    // Set up PWM timer
+    RCC->APB2ENR |= RCC_APB2ENR_TIM17EN;
+    TIM17->CR1 = 0;                         // Clear control registers
+    TIM17->CCMR1 = 0;                       // (prevents having to manually clear bits)
+    TIM17->CCER = 0;
+    // Set output-compare CH1 to PWM1 mode and enable CCR1 preload buffer
+    TIM17->CCMR1 |= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE);
+    TIM17->CCER |= TIM_CCER_CC1E;           // Enable capture-compare channel 1 depending on (CCxE, CCxNE, MOE, OSSI and OSSR)
+		// OC1 signal is output on the corresponding output opin depending on 
+		//MOE = 1
+		TIM17->BDTR |= TIM_BDTR_MOE;						// Enable outputs if their respective enable bits are set (CCxE, CCxNE);
+		//OSSI = 1
+		TIM17->BDTR |= TIM_BDTR_OSSI;						// When inactive, OC/OCN outputs are forced first with their idle level as soon as CCxE=1 or CCxNE=1. The OC/OCN enable output signal=1
+		//OSSR = 1
+		TIM17->BDTR |= TIM_BDTR_OSSR;						// When inactive, OC/OCN outputs are enabled with their inactrive level as soon as CCxE=1 or CCxNE=1. Then enable output signal=1;
+		TIM17->PSC = 1;                         // Run timer on 24Mhz
+    TIM17->ARR = 1200;                      // PWM at 20kHz
+    TIM17->CCR1 = 0;                        // Start PWM at 0% duty cycle
+		
+    TIM17->CR1 |= TIM_CR1_CEN;              // Enable timer
 }
 // Sets up encoder interface to read motor speed
-void encoder_init_y(void) {
-    /// TODO: Set up encoder input pins (TIMER 3 CH1 and CH2)
+void encoder_init(void) {
+		/*________________________________________MOTOR Y________________________________________ */
+		RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+    //  Set up encoder input pins (TIMER 3 CH1 and CH2)
 		// PC6 PC7
-		GPIOC->MODER |= (0x2<<14); // Setting PC7 to alternate function mode
-		GPIOC->MODER &= ~(0x1<<14); 
-		GPIOC->MODER |= (0x2<<12); // Setting PC6 to alternate function mode.
+		GPIOC->MODER |= (0x2<<14);
+		GPIOC->MODER &= ~(0x1<<14);
+		GPIOC->MODER |= (0x2<<12);
 		GPIOC->MODER &= ~(0x1<<12);
-	  GPIOC->AFR[0] &= ~(0xF<<24);
+		GPIOC->AFR[0] &= ~(0xF<<24);
 		GPIOC->AFR[0] &= ~(0x7<<28);
     /* Hint: MAKE SURE THAT YOU USE 5V TOLERANT PINS FOR THE ENCODER INPUTS!
      *       You'll fry the processor otherwise, read the lab to find out why!
@@ -196,28 +285,105 @@ void encoder_init_y(void) {
     //  just another option, the mid-bias is a bit simpler to understand though.)
     TIM3->CR1 |= TIM_CR1_CEN;                               // Enable timer
 		
+		
+		/*________________________________________MOTOR X________________________________________ */
+		RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+		//  Set up encoder input pins (TIMER 1 CH1 and CH2)
+		// PA8 & PA9
+		GPIOA->MODER &= ~(0xF<<16);
+		GPIOA->MODER |= (0x2<<18) | (0x2<<16);
+		// AF2
+		GPIOA->AFR[1] &= ~(0xFF<<0);
+		GPIOA->AFR[1] |= (0x2<<0);
+		GPIOA->AFR[1] |= (0x2<<4);
+    /* Hint: MAKE SURE THAT YOU USE 5V TOLERANT PINS FOR THE ENCODER INPUTS!
+     *       You'll fry the processor otherwise, read the lab to find out why!
+     */
 
+    // Set up encoder interface (TIM1 encoder input mode)
+    RCC->APB2ENR |= RCC_APB2ENR_TIM1EN;
+    TIM1->CCMR1 = 0;    //Clear control registers
+    TIM1->CCER = 0;
+    TIM1->SMCR = 0;
+    TIM1->CR1 = 0;
+
+    TIM1->CCMR1 |= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0);   // TI1FP1 and TI2FP2 signals connected to CH1 and CH2
+    TIM1->SMCR |= (TIM_SMCR_SMS_1 | TIM_SMCR_SMS_0);        // Capture encoder on both rising and falling edges
+    TIM1->ARR = 0xFFFF;                                     // Set ARR to top of timer (longest possible period)
+    TIM1->CNT = 0x7FFF;                                     // Bias at midpoint to allow for negative rotation
+    // (Could also cast unsigned register to signed number to get negative numbers if it rotates backwards past zero
+    //  just another option, the mid-bias is a bit simpler to understand though.)
+    TIM1->CR1 |= TIM_CR1_CEN;                               // Enable timer
+		
+		/* MOTOR Y & X */
     // Configure a second timer (TIM6) to fire an ISR on update event
     // Used to periodically check and update speed variable
     RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
 
-    /// TODO: Select PSC and ARR values that give an appropriate interrupt rate
+    //  Select PSC and ARR values that give an appropriate interrupt rate
 		
     /* Hint: See section in lab on sampling rate!
      *       Recommend choosing a sample rate that gives 2:1 ratio between encoder value
      *       and target speed. (Example: 200 RPM = 400 Encoder count for interrupt period)
      *       This is so your system will match the lab solution
      */
-         TIM6->PSC = 0x0007; // TODO: Change this!
-         TIM6->ARR = 0x927C; // TODO: Change this!
-
+    TIM6->PSC = 0x0007;
+		TIM6->ARR = 0x927C; 
+		
     TIM6->DIER |= TIM_DIER_UIE;             // Enable update event interrupt
     TIM6->CR1 |= TIM_CR1_CEN;               // Enable Timer
 
     NVIC_EnableIRQ(TIM6_DAC_IRQn);          // Enable interrupt in NVIC
     NVIC_SetPriority(TIM6_DAC_IRQn,2);
 }
-void PI_update(void) {
+// Sets up the entire motor drive system
+void motor_init(void) {
+    pwm_init();
+    encoder_init();
+}
+
+
+
+/* METHODS TO STOP THE TAIL FROM MOVING INTO TOO STRESSFULL POSITIONS */
+int proceed_to_rotate_y() {
+		if(dir_up) {
+			if((rotations_y < MAX_Y_ENC_ROTATIONS && rotations_x < (MAX_X_ENC_ROTATIONS>>1) && rotations_x > -(MAX_X_ENC_ROTATIONS>>1)) || rotations_y < (MAX_Y_ENC_ROTATIONS>>1))
+				return 1;
+		}	else { // y_rotating_down
+			if((rotations_y > -MAX_Y_ENC_ROTATIONS && rotations_x < (MAX_X_ENC_ROTATIONS>>1) && rotations_x > -(MAX_X_ENC_ROTATIONS>>1)) || rotations_y > -(MAX_Y_ENC_ROTATIONS>>1))
+				return 1;
+		}
+	return 0;
+}
+
+int proceed_to_rotate_x() {
+	if(dir_right) {
+		if((rotations_x < MAX_X_ENC_ROTATIONS && rotations_y < (MAX_Y_ENC_ROTATIONS>>1) && rotations_y > -(MAX_Y_ENC_ROTATIONS>>1)) || rotations_x < (MAX_X_ENC_ROTATIONS>>1))
+			return 1;
+	}	else { // y_rotating_down
+		if((rotations_x > -MAX_X_ENC_ROTATIONS && rotations_y < (MAX_Y_ENC_ROTATIONS>>1) && rotations_y > -(MAX_Y_ENC_ROTATIONS>>1)) || rotations_x > -(MAX_X_ENC_ROTATIONS>>1))
+			return 1;
+	}
+	return 0;
+}
+
+// Set the duty cycle of the PWM, accepts (0-100)
+void pwm_setDutyCycle_y(uint8_t duty) {
+    if(duty <= 100) {
+        TIM14->CCR1 = ((uint32_t)duty*TIM14->ARR)/100;// Use linear transform to produce CCR1 value
+        // (CCR1 == "pulse" parameter in PWM struct used by peripheral library)
+    }
+}
+
+// Set the duty cycle of the PWM, accepts (0-100)
+void pwm_setDutyCycle_x(uint8_t duty) {
+    if(duty <= 100) {
+			 TIM17->CCR1 = ((uint32_t)duty*TIM17->ARR)/100;// Use linear transform to produce CCR1 value
+        // (CCR1 == "pulse" parameter in PWM struct used by peripheral library)
+   }
+}
+
+void PI_update_y(void) {
     /* Run PI control loop
      *
      * Make sure to use the indicated variable names. This allows STMStudio to monitor
@@ -234,29 +400,63 @@ void PI_update(void) {
      * adc_value -> raw ADC counts to report current
      *
      */
-		int16_t y_motor_rpm = y_motor_speed/2;
-    /// TODO: calculate error signal and write to "error" variable
-		int16_t error = y_target_rpm - y_motor_rpm;
-		
-    /* Hint: Remember that your calculated motor speed may not be directly in RPM!
-     *       You will need to convert the target or encoder speeds to the same units.
-     *       I recommend converting to whatever units result in larger values, gives
-     *       more resolution.
-     */
+		int16_t motor_rpm = motor_speed_y/2;
 
-    /// TODO: Calculate integral portion of PI controller, write to "error_integral" variable
-		int16_t y_error_integral = y_error_integral + (y_Ki*error);
-    /// TODO: Clamp the value of the integral to a limited positive range
-		y_error_integral = y_error_integral < 3200 ? y_error_integral : 3200;
-		y_error_integral = y_error_integral < 0 ? 0 : y_error_integral;
-    /* Hint: The value clamp is needed to prevent excessive "windup" in the integral.
-     *       You'll read more about this for the post-lab. The exact value is arbitrary
-     *       but affects the PI tuning.
-     *       Recommend that you clamp between 0 and 3200 (what is used in the lab solution)
-     */
+		if (motor_rpm == 0) {
+			if (dir_up && target_rpm_y < 0) {
+				y_dir_down();
+			} else if (!dir_up && target_rpm_y > 0) {
+				y_dir_up();
+			}
+		}
+		int16_t output = 0;
+		if(proceed_to_rotate_y()) {
+			//  calculate error signal and write to "error" variable
+			if(dir_up)
+			{
+				int16_t t_rpm = target_rpm_y;
+				t_rpm = t_rpm < 0 ? 0 : t_rpm;
+				error_y = t_rpm - motor_rpm;
+						/* Hint: Remember that your calculated motor speed may not be directly in RPM!
+				 *       You will need to convert the target or encoder speeds to the same units.
+				 *       I recommend converting to whatever units result in larger values, gives
+				 *       more resolution.
+				 */
 
-    /// TODO: Calculate proportional portion, add integral and write to "output" variable
-    int16_t y_output = y_Kp*error + y_error_integral; // Change this!
+				//  Calculate integral portion of PI controller, write to "error_integral" variable
+				error_integral_y = error_integral_y + (Ki_y*error_y);
+				//  Clamp the value of the integral to a limited positive range
+				error_integral_y = error_integral_y < 3200 ? error_integral_y : 3200;
+				error_integral_y = error_integral_y < 0 ? 0 : error_integral_y;
+				/* Hint: The value clamp is needed to prevent excessive "windup" in the integral.
+				 *       You'll read more about this for the post-lab. The exact value is arbitrary
+				 *       but affects the PI tuning.
+				 *       Recommend that you clamp between 0 and 3200 (what is used in the lab solution)
+				 */
+			}
+			else {			
+				int16_t t_rpm = target_rpm_y;
+				t_rpm = t_rpm > 0 ? 0 : t_rpm;
+				error_y = (t_rpm ) - motor_rpm;
+						/* Hint: Remember that your calculated motor speed may not be directly in RPM!
+				 *       You will need to convert the target or encoder speeds to the same units.
+				 *       I recommend converting to whatever units result in larger values, gives
+				 *       more resolution.
+				 */
+
+				//  Calculate integral portion of PI controller, write to "error_integral" variable
+				error_integral_y = error_integral_y + (Ki_y*error_y);
+				//  Clamp the value of the integral to a limited negative range
+				error_integral_y = error_integral_y < 0 ? error_integral_y : 0;
+				error_integral_y = error_integral_y < -3200 ? -3200 : error_integral_y;
+				/* Hint: The value clamp is needed to prevent excessive "windup" in the integral.
+				 *       You'll read more about this for the post-lab. The exact value is arbitrary
+				 *       but affects the PI tuning.
+				 *       Recommend that you clamp between -3200 and 0 (what is used in the lab solution)
+				 */
+			}
+			output = Kp_y*error_y + error_integral_y;
+		}
 
     /* Because the calculated values for the PI controller are significantly larger than
      * the allowable range for duty cycle, you'll need to divide the result down into
@@ -274,64 +474,149 @@ void PI_update(void) {
      * required for tuning.
      */
 
-     /// TODO: Divide the output into the proper range for output adjustment
-		y_output = y_output >> 5;
+     //  Divide the output into the proper range for output adjustment
+		output = abs(output) >> 5;
 		
-     /// TODO: Clamp the output value between 0 and 100
-		y_output = y_output > 100 ? 100 : y_output;
-		y_output = y_output < 0 ? 0 : y_output;
+     //  Clamp the output value between 0 and 100
+		output = output;
+		output = output > 100 ? 100 : output;
+		output = output < 0 ? 0 : output;
 		
-    pwm_setDutyCycle_y(y_output);
-
-    // Read the ADC value for current monitoring, actual conversion into meaningful units
-    // will be performed by STMStudio
-    if(ADC1->ISR & ADC_ISR_EOC) {   // If the ADC has new data for us
-        y_adc_value = ADC1->DR;       // Read the motor current for debug viewing
-    }
+    pwm_setDutyCycle_y(output);
+    duty_cycle_y = output;            // For debug viewing
 }
+void PI_update_x(void) {
+    /* Run PI control loop
+     *
+     * Make sure to use the indicated variable names. This allows STMStudio to monitor
+     * the condition of the system!
+     *
+     * target_rpm -> target motor speed in RPM
+     * motor_speed -> raw motor speed in encoder counts
+     * error -> error signal (difference between measured speed and target)
+     * error_integral -> integrated error signal
+     * Kp -> Proportional Gain
+     * Ki -> Integral Gain
+     * output -> raw output signal from PI controller
+     * duty_cycle -> used to report the duty cycle of the system
+     * adc_value -> raw ADC counts to report current
+     *
+     */
+		int16_t motor_rpm = motor_speed_x/2;
 
+		if (motor_rpm == 0) {
+			if (dir_right && target_rpm_x < 0) {
+				x_dir_left();
+			} else if (!dir_right && target_rpm_x > 0) {
+				x_dir_right();
+			}
+		}
+		int16_t output = 0;
+		if(proceed_to_rotate_x()) {
+			//  calculate error signal and write to "error" variable
+			if(dir_right)
+			{
+				int16_t t_rpm = target_rpm_x;
+				t_rpm = t_rpm < 0 ? 0 : t_rpm;
+				error_x = t_rpm - motor_rpm;
+						/* Hint: Remember that your calculated motor speed may not be directly in RPM!
+				 *       You will need to convert the target or encoder speeds to the same units.
+				 *       I recommend converting to whatever units result in larger values, gives
+				 *       more resolution.
+				 */
+
+				//  Calculate integral portion of PI controller, write to "error_integral" variable
+				error_integral_x = error_integral_x + (Ki_x*error_x);
+				//  Clamp the value of the integral to a limited positive range
+				error_integral_x = error_integral_x < 3200 ? error_integral_x : 3200;
+				error_integral_x = error_integral_x < 0 ? 0 : error_integral_x;
+				/* Hint: The value clamp is needed to prevent excessive "windup" in the integral.
+				 *       You'll read more about this for the post-lab. The exact value is arbitrary
+				 *       but affects the PI tuning.
+				 *       Recommend that you clamp between 0 and 3200 (what is used in the lab solution)
+				 */
+			}
+			else {			
+				int16_t t_rpm = target_rpm_x;
+				t_rpm = t_rpm > 0 ? 0 : t_rpm;
+				error_x = (t_rpm ) - motor_rpm;
+						/* Hint: Remember that your calculated motor speed may not be directly in RPM!
+				 *       You will need to convert the target or encoder speeds to the same units.
+				 *       I recommend converting to whatever units result in larger values, gives
+				 *       more resolution.
+				 */
+
+				//  Calculate integral portion of PI controller, write to "error_integral" variable
+				error_integral_x = error_integral_x + (Ki_x*error_x);
+				//  Clamp the value of the integral to a limited negative range
+				error_integral_x = error_integral_x < 0 ? error_integral_x : 0;
+				error_integral_x = error_integral_x < -3200 ? -3200 : error_integral_x;
+				/* Hint: The value clamp is needed to prevent excessive "windup" in the integral.
+				 *       You'll read more about this for the post-lab. The exact value is arbitrary
+				 *       but affects the PI tuning.
+				 *       Recommend that you clamp between -3200 and 0 (what is used in the lab solution)
+				 */
+			}
+			output = Kp_x*error_x + error_integral_x;
+		}
+
+    /* Because the calculated values for the PI controller are significantly larger than
+     * the allowable range for duty cycle, you'll need to divide the result down into
+     * an appropriate range. (Maximum integral clamp / X = 100% duty cycle)
+     *
+     * Hint: If you chose 3200 for the integral clamp you should divide by 32 (right shift by 5 bits),
+     *       this will give you an output of 100 at maximum integral "windup".
+     *
+     * This division also turns the above calculations into pseudo fixed-point. This is because
+     * the lowest 5 bits act as if they were below the decimal point until the division where they
+     * were truncated off to result in an integer value.
+     *
+     * Technically most of this is arbitrary, in a real system you would want to use a fixed-point
+     * math library. The main difference that these values make is the difference in the gain values
+     * required for tuning.
+     */
+
+     //  Divide the output into the proper range for output adjustment
+		output = abs(output) >> 5;
+		
+     //  Clamp the output value between 0 and 100
+		output = output;
+		output = output > 100 ? 100 : output;
+		output = output < 0 ? 0 : output;
+    pwm_setDutyCycle_x(output);
+    duty_cycle_x = output;            // For debug viewing
+}
 // Encoder interrupt to calculate motor speed, also manages PI controller
+// This method is called once every 37.5 ms.
 void TIM6_DAC_IRQHandler(void) {
+
+		/*________________________________________MOTOR Y________________________________________ */
     /* Calculate the motor speed in raw encoder counts
      * Note the motor speed is signed! Motor can be run in reverse.
      * Speed is measured by how far the counter moved from center point
      */
-    y_motor_speed = (TIM3->CNT - 0x7FFF);
+    motor_speed_y = (TIM3->CNT - 0x7FFF);
+		rotations_y += ((float)motor_speed_y/3000.0f);
     TIM3->CNT = 0x7FFF; // Reset back to center point
+		/*________________________________________MOTOR X________________________________________ */
+		/* Calculate the motor speed in raw encoder counts
+     * Note the motor speed is signed! Motor can be run in reverse.
+     * Speed is measured by how far the counter moved from center point
+     */
+		motor_speed_x = (TIM1->CNT - 0x7FFF);
+		rotations_x += ((float)motor_speed_x/3000.0f);
+    TIM1->CNT = 0x7FFF; // Reset back to center point
 
+		/*________________________________________MOTOR Y________________________________________ */
     // Call the PI update function
-    PI_update();
-
+    PI_update_y();
+		/*________________________________________MOTOR X________________________________________ */
+		PI_update_x();
+	
+		/* MOTOR X & Y */
     TIM6->SR &= ~TIM_SR_UIF;        // Acknowledge the interrupt
 }
 
-void ADC_init(void) {
-
-    /// TODO: Configure a pin for ADC input (used for current monitoring)
-		GPIOA->MODER |= (0x3<<4); // PA2 bits (5:4) ANOLOGUE MODE
-
-    // Configure ADC to 8-bit continuous-run mode, (asynchronous clock mode)
-    RCC->APB2ENR |= RCC_APB2ENR_ADCEN;
-
-    ADC1->CFGR1 = 0;
-    ADC1->CFGR1 |= (ADC_CFGR1_CONT);        // Set to continuous mode and 12-bit resolution
-
-    /// TODO: Enable the proper channel for the ADC pin you are using
-    ADC1->CHSELR |= ADC_CHSELR_CHSEL2; // Change this!
-
-    ADC1->CR = 0;
-    ADC1->CR |= ADC_CR_ADCAL;               // Perform self calibration
-    while(ADC1->CR & ADC_CR_ADCAL);         // Delay until calibration is complete
-
-    ADC1->CR |= ADC_CR_ADEN;                // Enable ADC
-    while(!(ADC1->ISR & ADC_ISR_ADRDY));    // Wait until ADC ready
-    ADC1->CR |= ADC_CR_ADSTART;             // Signal conversion start
-}
-void motor_init_y(void) {
-    pwm_init_y();
-    encoder_init_y();
-    ADC_init();
-}
 void transmit_char(char c) {
 	// Waiting on the USART status flag to indicate the transmit register is empty.
 	//GPIOC->ODR ^= (1<<9) | (1<<8); // DEBUGGER
@@ -504,15 +789,19 @@ void controller_prompt() {
 		switch(received_char) {
 			case UP:
 				transmit_string("\tUP Pressed");
+				target_rpm_y = 100;
 				break;
 			case DOWN:
 				transmit_string("\tDOWN Pressed");
+				target_rpm_y = -100;
 				break;
 			case RIGHT:
 				transmit_string("\tRIGHT Pressed");
+				target_rpm_x = 100;
 				break;
 			case LEFT:				
 				transmit_string("\tLEFT Pressed");
+				target_rpm_x = -100;
 				break;
 			case '\n':
 			case '\r':
@@ -538,23 +827,6 @@ void USART3_4_IRQHandler(void) {
 	USART_new_data = 1;
 	return;
 }
-
-/* METHODS TO STOP THE TAIL FROM MOVING INTO TOO STRESSFULL POSITIONS */
-int proceed_to_rotate_x() {
-	if((x_encoder_rotations < MAX_X_ENC_ROTATIONS) && (x_encoder_rotations > -MAX_X_ENC_ROTATIONS) &&
-		 (y_encoder_rotations < MAX_Y_ENC_ROTATIONS>>1) && (y_encoder_rotations > -MAX_Y_ENC_ROTATIONS>>1)) {
-			 return 1;
-	}
-	return 0;
-}
-int proceed_to_rotate_y() {
-	if((y_encoder_rotations < MAX_Y_ENC_ROTATIONS) && (y_encoder_rotations > -MAX_Y_ENC_ROTATIONS) &&
-		 (x_encoder_rotations < MAX_X_ENC_ROTATIONS>>1) && (x_encoder_rotations > -MAX_X_ENC_ROTATIONS>>1)) {
-			 return 1;
-	}
-	return 0;
-}
-
 // Blocking call to get back the coordinates of the left joystick.
 // A line of the serial input from the controller looks like this: "PS4,<x_coor (0-255)>,<y_coor (0-255)>,...\r\n"
 void get_left_joystick_coors (coors* coordinates) {
@@ -624,7 +896,7 @@ int main(void)
 	LED_init();
 	USART_init();
 	button_init();
-	motor_init_y();
+	motor_init();
 	coors coordinates;
   while (1)
   {
