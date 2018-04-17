@@ -58,8 +58,8 @@
 #define LEFT 'a'
 #define DEL 0x7F
 #define BAUD_RATE 9600
-#define MAX_Y_ENC_ROTATIONS 40
-#define MAX_X_ENC_ROTATIONS 40
+#define MAX_Y_ENC_ROTATIONS 4
+#define MAX_X_ENC_ROTATIONS 4
 
 volatile int16_t error_integral_y = 0;    // Integrated error signal
 volatile int16_t error_integral_x = 0;    // Integrated error signal
@@ -609,6 +609,7 @@ void TIM6_DAC_IRQHandler(void) {
 
 		/*________________________________________MOTOR Y________________________________________ */
     // Call the PI update function
+		GPIOC->ODR ^= (1<<ODR_ORANGE);
     PI_update_y();
 		/*________________________________________MOTOR X________________________________________ */
 		PI_update_x();
@@ -933,6 +934,11 @@ int main(void)
 				transmit_string("\tBLUETOOTH Mode SELECTED\n\r");
 				while (1) {
 					get_left_joystick_coors(&coordinates);
+					target_rpm_x = ((coordinates.x * 1176) / 1000) - 150;
+					target_rpm_y = ((coordinates.y * 1176) / 1000) - 150;
+					target_rpm_x = target_rpm_x < 10 && target_rpm_x > -10 ? 0 : target_rpm_x;
+					target_rpm_y = target_rpm_y < 10 && target_rpm_y > -10 ? 0 : target_rpm_y;
+					
 					if (coordinates.x <= 50)
 						transmit_char('L');
 					else if (coordinates.x <= 200)

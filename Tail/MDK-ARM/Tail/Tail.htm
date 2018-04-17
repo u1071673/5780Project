@@ -3,7 +3,7 @@
 <title>Static Call Graph - [Tail\Tail.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image Tail\Tail.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Apr 17 00:21:59 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Tue Apr 17 12:07:09 2018
 <BR><P>
 <H3>Maximum Stack Usage =        172 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -193,6 +193,7 @@ Global Symbols
 <LI><a href="#[43]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_GetSysClockFreq
 <LI><a href="#[50]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwm_setDutyCycle_y
 <LI><a href="#[4b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pwm_setDutyCycle_x
+<LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART_init
 <LI><a href="#[52]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
 </UL>
@@ -473,7 +474,7 @@ Global Symbols
 <P><STRONG><a name="[27]"></a>SystemInit</STRONG> (Thumb, 76 bytes, Stack size 0 bytes, system_stm32f0xx.o(i.SystemInit))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f072xb.o(.text)
 </UL>
-<P><STRONG><a name="[17]"></a>TIM6_DAC_IRQHandler</STRONG> (Thumb, 92 bytes, Stack size 24 bytes, main.o(i.TIM6_DAC_IRQHandler))
+<P><STRONG><a name="[17]"></a>TIM6_DAC_IRQHandler</STRONG> (Thumb, 102 bytes, Stack size 24 bytes, main.o(i.TIM6_DAC_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 60<LI>Call Chain = TIM6_DAC_IRQHandler &rArr; __aeabi_fadd &rArr; _float_epilogue
 </UL>
 <BR>[Calls]<UL><LI><a href="#[34]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_i2f
@@ -565,10 +566,11 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[26]"></a>main</STRONG> (Thumb, 288 bytes, Stack size 8 bytes, main.o(i.main))
+<P><STRONG><a name="[26]"></a>main</STRONG> (Thumb, 392 bytes, Stack size 8 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 172<LI>Call Chain = main &rArr; SystemClock_Config &rArr; HAL_RCC_ClockConfig &rArr; HAL_RCC_GetSysClockFreq &rArr; __aeabi_uidivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[39]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Init
+<LI><a href="#[3d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uidivmod
 <LI><a href="#[58]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transmit_string
 <LI><a href="#[59]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transmit_char
 <LI><a href="#[64]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;operation_prompt
@@ -618,13 +620,13 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[4a]"></a>proceed_to_rotate_x</STRONG> (Thumb, 74 bytes, Stack size 8 bytes, main.o(i.proceed_to_rotate_x))
+<P><STRONG><a name="[4a]"></a>proceed_to_rotate_x</STRONG> (Thumb, 80 bytes, Stack size 8 bytes, main.o(i.proceed_to_rotate_x))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = proceed_to_rotate_x
 </UL>
 <BR>[Called By]<UL><LI><a href="#[47]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PI_update_x
 </UL>
 
-<P><STRONG><a name="[4f]"></a>proceed_to_rotate_y</STRONG> (Thumb, 74 bytes, Stack size 8 bytes, main.o(i.proceed_to_rotate_y))
+<P><STRONG><a name="[4f]"></a>proceed_to_rotate_y</STRONG> (Thumb, 80 bytes, Stack size 8 bytes, main.o(i.proceed_to_rotate_y))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = proceed_to_rotate_y
 </UL>
 <BR>[Called By]<UL><LI><a href="#[4c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PI_update_y
