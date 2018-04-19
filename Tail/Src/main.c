@@ -48,18 +48,17 @@
 #define ODR_ORANGE 8
 #define ODR_GREEN 9
 #define AUTONOMOUS '0'
-#define CONTROLLER '1'
-#define OPERATION '2'
-#define LED_MODE '3'
-#define BLUETOOTH '4'
+#define DEBUG_MODE '1'
+#define LED_MODE '2'
+#define USER_MODE '3'
 #define UP 'w'
 #define DOWN 's'
 #define RIGHT 'd'
 #define LEFT 'a'
 #define DEL 0x7F
 #define BAUD_RATE 9600
-#define MAX_Y_ENC_ROTATIONS 4
-#define MAX_X_ENC_ROTATIONS 4
+#define MAX_Y_ENC_ROTATIONS 3.5f
+#define MAX_X_ENC_ROTATIONS 3.0f
 
 volatile int16_t error_integral_y = 0;    // Integrated error signal
 volatile int16_t error_integral_x = 0;    // Integrated error signal
@@ -84,9 +83,7 @@ volatile int8_t dir_up = 0;
 volatile int8_t dir_right = 0;
 volatile float rotations_y = 0;
 volatile float rotations_x = 0;
-
-
-
+volatile int rest_counts = 0;
 
 typedef struct _coors {
 	unsigned char x;
@@ -98,6 +95,13 @@ void SystemClock_Config(void);
 /* STATIC GLOBAL VARIABLES */
 volatile static char received_char = 0;
 volatile static uint8_t USART_new_data = 0;
+
+void activate_bt(void) {
+	GPIOB->ODR |= (1<<2);
+}
+void deactivate_bt(void) {
+	GPIOB->ODR &= ~(1<<2);
+}
 
 // Counter Clock wise
 void y_dir_down(void) {
@@ -129,6 +133,11 @@ void x_dir_right(void) {
 }
 
 /* INIT METHODS */
+void bt_init() {
+	RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+	GPIOB->MODER |= (0x1<<4);
+	GPIOB->ODR &= ~(1<<2);
+}
 void LED_init() {
 	// Enable peripheral clock to GPIOC
   RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
@@ -347,10 +356,10 @@ void motor_init(void) {
 /* METHODS TO STOP THE TAIL FROM MOVING INTO TOO STRESSFULL POSITIONS */
 int proceed_to_rotate_y() {
 		if(dir_up) {
-			if((rotations_y < MAX_Y_ENC_ROTATIONS && rotations_x < (MAX_X_ENC_ROTATIONS>>1) && rotations_x > -(MAX_X_ENC_ROTATIONS>>1)) || rotations_y < (MAX_Y_ENC_ROTATIONS>>1))
+			if((rotations_y < MAX_Y_ENC_ROTATIONS && rotations_x < (MAX_X_ENC_ROTATIONS/2.0f) && rotations_x > -(MAX_X_ENC_ROTATIONS/2.0f)) || rotations_y < (MAX_Y_ENC_ROTATIONS/2.0f))
 				return 1;
 		}	else { // y_rotating_down
-			if((rotations_y > -MAX_Y_ENC_ROTATIONS && rotations_x < (MAX_X_ENC_ROTATIONS>>1) && rotations_x > -(MAX_X_ENC_ROTATIONS>>1)) || rotations_y > -(MAX_Y_ENC_ROTATIONS>>1))
+			if((rotations_y > -MAX_Y_ENC_ROTATIONS && rotations_x < (MAX_X_ENC_ROTATIONS/2.0f) && rotations_x > -(MAX_X_ENC_ROTATIONS/2.0f)) || rotations_y > -(MAX_Y_ENC_ROTATIONS/2.0f))
 				return 1;
 		}
 	return 0;
@@ -358,10 +367,10 @@ int proceed_to_rotate_y() {
 
 int proceed_to_rotate_x() {
 	if(dir_right) {
-		if((rotations_x < MAX_X_ENC_ROTATIONS && rotations_y < (MAX_Y_ENC_ROTATIONS>>1) && rotations_y > -(MAX_Y_ENC_ROTATIONS>>1)) || rotations_x < (MAX_X_ENC_ROTATIONS>>1))
+		if((rotations_x < MAX_X_ENC_ROTATIONS && rotations_y < (MAX_Y_ENC_ROTATIONS/2.0f) && rotations_y > -(MAX_Y_ENC_ROTATIONS/2.0f)) || rotations_x < (MAX_X_ENC_ROTATIONS/2.0f))
 			return 1;
 	}	else { // y_rotating_down
-		if((rotations_x > -MAX_X_ENC_ROTATIONS && rotations_y < (MAX_Y_ENC_ROTATIONS>>1) && rotations_y > -(MAX_Y_ENC_ROTATIONS>>1)) || rotations_x > -(MAX_X_ENC_ROTATIONS>>1))
+		if((rotations_x > -MAX_X_ENC_ROTATIONS && rotations_y < (MAX_Y_ENC_ROTATIONS/2.0f) && rotations_y > -(MAX_Y_ENC_ROTATIONS/2.0f)) || rotations_x > -(MAX_X_ENC_ROTATIONS/2.0f))
 			return 1;
 	}
 	return 0;
@@ -756,29 +765,7 @@ void led_prompt() {
 	}
 	operate_led(led_color, led_mode);
 }
-
-void operation_prompt() {
-	transmit_string("\n\r");
-	transmit_string("OPERATION?\t");
-	char *string = receive_string();
-	transmit_string("\n\r");
-	// check result
-	if(!strcmp("wag", string)) {
-		transmit_string("\twagging...");
-		// TODO: Implement
-	} else if(!strcmp("crawl", string)) {
-		transmit_string("\tcrawling...");
-		// TODO: Implement
-	} else if (!strcmp("curl", string)) {
-		transmit_string("\tcurling...");
-		// TODO: Implement
-	} else {
-		transmit_string("\tInvalid Operation!");
-	}
-	free(string);
-}
-
-void controller_prompt() {
+void debug_prompt() {
 	received_char = 0;
 	USART_new_data = 0;
 	transmit_string("\n\r");
@@ -841,7 +828,11 @@ void get_left_joystick_coors (coors* coordinates) {
 	while (1) {
 		if (err)
 			break;
-		c = receive_char();
+		received_char = 0;
+		USART_new_data = 0;
+		while(!USART_new_data);
+		c = received_char;
+		//transmit_char(c);
 		if ((str_index == 0) && c == 'P') {
 			str_index++;
 		} else if ((str_index == 1) && c == 'S') {
@@ -882,6 +873,17 @@ void get_left_joystick_coors (coors* coordinates) {
 		transmit_char('E');
 }
 
+void main_menu() {
+	transmit_string("\n\rSELECT MODE");
+	transmit_string("\n\r1 DEBUG Mode");
+	transmit_string("\n\r2 LED COLOR Mode");
+	transmit_string("\n\r3 USER Mode");
+	transmit_string("\n\r");
+	USART_new_data = 0;
+	received_char = 0;
+	deactivate_bt();
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -894,63 +896,50 @@ int main(void)
   HAL_Init();
   /* Configure the system clock */
   SystemClock_Config();
+	bt_init();
 	LED_init();
 	USART_init();
 	button_init();
 	motor_init();
 	coors coordinates;
-  while (1)
-  {
-		USART_new_data = 0;
-		received_char = 0;
-		transmit_string("\n\rSELECT MODE");
-		transmit_string("\n\r0 TAIL Autonomous Mode");
-		transmit_string("\n\r1 TAIL Controller Mode");
-		transmit_string("\n\r2 TAIL Operation Mode");
-		transmit_string("\n\r3 LED COLOR Mode");
-		transmit_string("\n\r4 BLUETOOTH Mode");
-		transmit_string("\n\r");
-		while(!USART_new_data); // Wait for USART new data to arrive
-		switch(received_char) {
-			case AUTONOMOUS:
-				transmit_string("\tAUTONOMOUS Mode SELECTED");
-				autonomous_prompt();
-				break;
-			case CONTROLLER:
-				transmit_string("\tCONTROLLER Mode SELECTED");
-				controller_prompt();
-				break;
-			case OPERATION:
-				transmit_string("\tOPERATION Mode SELECTED");
-				operation_prompt();
+	main_menu();
+	while (1)
+	{
+		//while(!USART_new_data); // Wait for USART new data to arrive
+		if (USART_new_data) {
+			target_rpm_x = 0;
+			transmit_char(received_char);
+			switch(received_char) {
+			case DEBUG_MODE:
+				transmit_string("\tDEBUG Mode SELECTED");
+				debug_prompt();
 				break;
 			case LED_MODE:
 				transmit_string("\tLED COLOR Mode SELECTED");
 				led_prompt();
 				break;
-			case BLUETOOTH:
+			case USER_MODE:
 				// Disable USART interrupts b/c there would be too many from constant char stream
-				NVIC_DisableIRQ(USART3_4_IRQn);
-				transmit_string("\tBLUETOOTH Mode SELECTED\n\r");
+				transmit_string("\tUSER Mode SELECTED\n\r");
+			  activate_bt();
+				rest_counts = 0;
 				while (1) {
 					get_left_joystick_coors(&coordinates);
 					target_rpm_x = ((coordinates.x * 1176) / 1000) - 150;
 					target_rpm_y = ((coordinates.y * 1176) / 1000) - 150;
-					target_rpm_x = target_rpm_x < 10 && target_rpm_x > -10 ? 0 : target_rpm_x;
-					target_rpm_y = target_rpm_y < 10 && target_rpm_y > -10 ? 0 : target_rpm_y;
-					
-					if (coordinates.x <= 50)
-						transmit_char('L');
-					else if (coordinates.x <= 200)
-						transmit_char('M');
-					else
-						transmit_char('R');
-					if (coordinates.y <= 50)
-						transmit_char('T');
-					else if (coordinates.y <= 200)
-						transmit_char('C');
-					else
-						transmit_char('B');
+					target_rpm_x = target_rpm_x < 20 && target_rpm_x > -20 ? 0 : target_rpm_x;
+					target_rpm_y = target_rpm_y < 20 && target_rpm_y > -20 ? 0 : target_rpm_y;
+					target_rpm_y = -target_rpm_y;
+					if ((target_rpm_x == 0) && (target_rpm_y == 0))
+						++rest_counts;
+					else {
+						GPIOC->ODR ^= (1<<ODR_GREEN);
+						rest_counts = 0;
+					}
+					if (rest_counts >= 200) { 
+						deactivate_bt();
+						break;
+					}
 				}
 			case UP:
 				transmit_string("\tUP Pressed");
@@ -967,12 +956,29 @@ int main(void)
 			case '\n':
 			case '\r':
 				break;
-			default:
-				transmit_string("\tUnrecognized Character: ");
+			default: // Autonomous mode.
+				transmit_string("INVALID CHARACTER: ");
 				transmit_char(received_char);
 				break;
+			}
+			main_menu();
+		} else {
+			// We're in autonomous mode
+			if(dir_right) {
+				if(proceed_to_rotate_x()){
+					target_rpm_x = 60;
+				} else {
+					target_rpm_x = -60;
+				}
+			} else {
+				if(proceed_to_rotate_x()){
+					target_rpm_x = -60;
+				} else {
+					target_rpm_x = 60;
+				}
+			}
 		}
-  }
+	}
 }
 
 /**
