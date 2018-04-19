@@ -55,6 +55,8 @@
 #define DOWN 's'
 #define RIGHT 'd'
 #define LEFT 'a'
+#define ROTATIONS 'r'
+#define SPACE ' '
 #define DEL 0x7F
 #define BAUD_RATE 9600
 #define MAX_Y_ENC_ROTATIONS 3.5f
@@ -84,6 +86,7 @@ volatile int8_t dir_right = 0;
 volatile float rotations_y = 0;
 volatile float rotations_x = 0;
 volatile int rest_counts = 0;
+volatile int limitless = 0;
 
 typedef struct _coors {
 	unsigned char x;
@@ -355,17 +358,21 @@ void motor_init(void) {
 
 /* METHODS TO STOP THE TAIL FROM MOVING INTO TOO STRESSFULL POSITIONS */
 int proceed_to_rotate_y() {
-		if(dir_up) {
-			if((rotations_y < MAX_Y_ENC_ROTATIONS && rotations_x < (MAX_X_ENC_ROTATIONS/2.0f) && rotations_x > -(MAX_X_ENC_ROTATIONS/2.0f)) || rotations_y < (MAX_Y_ENC_ROTATIONS/2.0f))
-				return 1;
-		}	else { // y_rotating_down
-			if((rotations_y > -MAX_Y_ENC_ROTATIONS && rotations_x < (MAX_X_ENC_ROTATIONS/2.0f) && rotations_x > -(MAX_X_ENC_ROTATIONS/2.0f)) || rotations_y > -(MAX_Y_ENC_ROTATIONS/2.0f))
-				return 1;
-		}
+	if(limitless)
+		return 1;
+	if(dir_up) {
+		if((rotations_y < MAX_Y_ENC_ROTATIONS && rotations_x < (MAX_X_ENC_ROTATIONS/2.0f) && rotations_x > -(MAX_X_ENC_ROTATIONS/2.0f)) || rotations_y < (MAX_Y_ENC_ROTATIONS/2.0f))
+			return 1;
+	}	else { // y_rotating_down
+		if((rotations_y > -MAX_Y_ENC_ROTATIONS && rotations_x < (MAX_X_ENC_ROTATIONS/2.0f) && rotations_x > -(MAX_X_ENC_ROTATIONS/2.0f)) || rotations_y > -(MAX_Y_ENC_ROTATIONS/2.0f))
+			return 1;
+	}
 	return 0;
 }
 
 int proceed_to_rotate_x() {
+	if(limitless)
+		return 1;
 	if(dir_right) {
 		if((rotations_x < MAX_X_ENC_ROTATIONS && rotations_y < (MAX_Y_ENC_ROTATIONS/2.0f) && rotations_y > -(MAX_Y_ENC_ROTATIONS/2.0f)) || rotations_x < (MAX_X_ENC_ROTATIONS/2.0f))
 			return 1;
@@ -374,6 +381,47 @@ int proceed_to_rotate_x() {
 			return 1;
 	}
 	return 0;
+}
+
+int tail_is_center_x() {
+	if(rotations_x < 0.5f && rotations_x > -0.5f)
+		return 1;
+	return 0;
+	
+}
+int tail_is_center_y() {
+	if(rotations_y < 0.5f && rotations_y > -0.5f)
+		return 1;
+	return 0;
+}
+
+void center_tail_x() {
+	if(tail_is_center_x()) {
+		target_rpm_x = 0;
+		return;
+	}
+	if(dir_right) {
+		if(rotations_x > 0.5f)
+				target_rpm_x = -60;
+	} else { // dir_left
+		if(rotations_x < -0.5f) {
+				target_rpm_x = 60;
+		}
+	}
+}
+void center_tail_y() {
+	if(tail_is_center_y()) {
+		target_rpm_y = 0;
+		return;
+	}
+	if(dir_up) {
+		if(rotations_y > 0.5f)
+				target_rpm_y = -60;
+	} else { // dir_down
+		if(rotations_y < -0.5f) {
+				target_rpm_y = 60;
+		}
+	}
 }
 
 // Set the duty cycle of the PWM, accepts (0-100)
@@ -768,28 +816,41 @@ void led_prompt() {
 void debug_prompt() {
 	received_char = 0;
 	USART_new_data = 0;
+	limitless = 1;
+	target_rpm_x = 0;
+	target_rpm_y = 0;
 	transmit_string("\n\r");
-	transmit_string("w=UP, s=DOWN, d=RIGHT, a=LEFT [enter]=exit");
+	transmit_string("w=UP, s=DOWN, d=RIGHT, a=LEFT, r=RESET ROTATIONS, [SPACE]=stop [enter]=exit");
 	while(received_char != '\n' && received_char != '\r') {
 		transmit_string("\n\r");
 		while(!USART_new_data); // Wait for USART new data to arrive
 		USART_new_data = 0;
 		switch(received_char) {
 			case UP:
-				transmit_string("\tUP Pressed");
+				transmit_string("\tGOING UP");
 				target_rpm_y = 100;
 				break;
 			case DOWN:
-				transmit_string("\tDOWN Pressed");
+				transmit_string("\tGOING DOWN");
 				target_rpm_y = -100;
 				break;
 			case RIGHT:
-				transmit_string("\tRIGHT Pressed");
+				transmit_string("\tGOING RIGHT");
 				target_rpm_x = 100;
 				break;
-			case LEFT:				
-				transmit_string("\tLEFT Pressed");
+			case LEFT:
+				transmit_string("\tGOING LEFT");
 				target_rpm_x = -100;
+				break;
+			case SPACE:
+				transmit_string("\tSTOPPING TAIL");
+				target_rpm_x = 0;
+				target_rpm_y = 0;
+				break;
+			case ROTATIONS:
+				transmit_string("\tROTATIONS RESET");
+				rotations_x = 0;
+				rotations_y = 0;
 				break;
 			case '\n':
 			case '\r':
@@ -800,6 +861,7 @@ void debug_prompt() {
 				break;
 		}
 	}
+		limitless = 0;
 }
 void autonomous_prompt() {
 }
@@ -964,19 +1026,22 @@ int main(void)
 			main_menu();
 		} else {
 			// We're in autonomous mode
-			if(dir_right) {
-				if(proceed_to_rotate_x()){
-					target_rpm_x = 60;
-				} else {
-					target_rpm_x = -60;
-				}
-			} else {
-				if(proceed_to_rotate_x()){
-					target_rpm_x = -60;
-				} else {
-					target_rpm_x = 60;
-				}
-			}
+			center_tail_x();
+			center_tail_y();
+//			if(dir_right) {
+//				if(proceed_to_rotate_x()){
+//					target_rpm_x = 60;
+//				} else {
+//					target_rpm_x = -60;
+//				}
+//			} else {
+//				if(proceed_to_rotate_x()){
+//					target_rpm_x = -60;
+//				} else {
+//					target_rpm_x = 60;
+//				}
+//			}
+		
 		}
 	}
 }
