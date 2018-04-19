@@ -356,6 +356,9 @@ Section Cross References
     main.o(i.main) refers to main.o(i.deactivate_bt) for deactivate_bt
     main.o(i.main) refers to main.o(i.center_tail_x) for center_tail_x
     main.o(i.main) refers to main.o(i.center_tail_y) for center_tail_y
+    main.o(i.main) refers to main.o(i.tail_is_center_x) for tail_is_center_x
+    main.o(i.main) refers to main.o(i.tail_is_center_y) for tail_is_center_y
+    main.o(i.main) refers to main.o(i.proceed_to_rotate_x) for proceed_to_rotate_x
     main.o(i.main) refers to main.o(.data) for .data
     main.o(i.main_menu) refers to main.o(i.transmit_string) for transmit_string
     main.o(i.main_menu) refers to main.o(i.deactivate_bt) for deactivate_bt
@@ -869,7 +872,7 @@ Image Symbol Table
     i.get_left_joystick_coors                0x08001398   Section        0  main.o(i.get_left_joystick_coors)
     i.led_prompt                             0x0800144c   Section        0  main.o(i.led_prompt)
     i.main                                   0x08001570   Section        0  main.o(i.main)
-    i.main_menu                              0x0800176c   Section        0  main.o(i.main_menu)
+    i.main_menu                              0x08001740   Section        0  main.o(i.main_menu)
     i.malloc                                 0x080017e8   Section        0  malloc.o(i.malloc)
     i.motor_init                             0x08001854   Section        0  main.o(i.motor_init)
     i.operate_led                            0x08001860   Section        0  main.o(i.operate_led)
@@ -895,15 +898,15 @@ Image Symbol Table
     .conststring                             0x08001db0   Section       76  main.o(.conststring)
     .data                                    0x20000000   Section        4  system_stm32f0xx.o(.data)
     .data                                    0x20000004   Section        4  stm32f0xx_hal.o(.data)
-    .data                                    0x20000008   Section       44  main.o(.data)
+    .data                                    0x20000008   Section       48  main.o(.data)
     received_char                            0x20000010   Data           1  main.o(.data)
     USART_new_data                           0x20000011   Data           1  main.o(.data)
-    .data                                    0x20000034   Section        4  mvars.o(.data)
     .data                                    0x20000038   Section        4  mvars.o(.data)
-    .data                                    0x2000003c   Section        4  errno.o(.data)
-    _errno                                   0x2000003c   Data           4  errno.o(.data)
-    HEAP                                     0x20000040   Section      512  startup_stm32f072xb.o(HEAP)
-    STACK                                    0x20000240   Section     1024  startup_stm32f072xb.o(STACK)
+    .data                                    0x2000003c   Section        4  mvars.o(.data)
+    .data                                    0x20000040   Section        4  errno.o(.data)
+    _errno                                   0x20000040   Data           4  errno.o(.data)
+    HEAP                                     0x20000048   Section      512  startup_stm32f072xb.o(HEAP)
+    STACK                                    0x20000248   Section     1024  startup_stm32f072xb.o(STACK)
 
     Global Symbols
 
@@ -1021,8 +1024,8 @@ Image Symbol Table
     free                                     0x08001345   Thumb Code    80  malloc.o(i.free)
     get_left_joystick_coors                  0x08001399   Thumb Code   176  main.o(i.get_left_joystick_coors)
     led_prompt                               0x0800144d   Thumb Code   192  main.o(i.led_prompt)
-    main                                     0x08001571   Thumb Code   344  main.o(i.main)
-    main_menu                                0x0800176d   Thumb Code    46  main.o(i.main_menu)
+    main                                     0x08001571   Thumb Code   360  main.o(i.main)
+    main_menu                                0x08001741   Thumb Code    56  main.o(i.main_menu)
     malloc                                   0x080017e9   Thumb Code    92  malloc.o(i.malloc)
     motor_init                               0x08001855   Thumb Code    12  main.o(i.motor_init)
     operate_led                              0x08001861   Thumb Code   136  main.o(i.operate_led)
@@ -1067,11 +1070,12 @@ Image Symbol Table
     rotations_x                              0x20000028   Data           4  main.o(.data)
     rest_counts                              0x2000002c   Data           4  main.o(.data)
     limitless                                0x20000030   Data           4  main.o(.data)
-    __microlib_freelist                      0x20000034   Data           4  mvars.o(.data)
-    __microlib_freelist_initialised          0x20000038   Data           4  mvars.o(.data)
-    __heap_base                              0x20000040   Data           0  startup_stm32f072xb.o(HEAP)
-    __heap_limit                             0x20000240   Data           0  startup_stm32f072xb.o(HEAP)
-    __initial_sp                             0x20000640   Data           0  startup_stm32f072xb.o(STACK)
+    tail_needs_centering                     0x20000034   Data           4  main.o(.data)
+    __microlib_freelist                      0x20000038   Data           4  mvars.o(.data)
+    __microlib_freelist_initialised          0x2000003c   Data           4  mvars.o(.data)
+    __heap_base                              0x20000048   Data           0  startup_stm32f072xb.o(HEAP)
+    __heap_limit                             0x20000248   Data           0  startup_stm32f072xb.o(HEAP)
+    __initial_sp                             0x20000648   Data           0  startup_stm32f072xb.o(STACK)
 
 
 
@@ -1081,7 +1085,7 @@ Memory Map of the image
 
   Image Entry point : 0x080000c1
 
-  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00001e5c, Max: 0x00020000, ABSOLUTE)
+  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00001e60, Max: 0x00020000, ABSOLUTE)
 
     Execution Region ER_IROM1 (Exec base: 0x08000000, Load base: 0x08000000, Size: 0x00001e1c, Max: 0x00020000, ABSOLUTE)
 
@@ -1163,8 +1167,8 @@ Memory Map of the image
     0x08001344   0x08001344   0x00000054   Code   RO         1857    i.free              mc_p.l(malloc.o)
     0x08001398   0x08001398   0x000000b4   Code   RO         1617    i.get_left_joystick_coors  main.o
     0x0800144c   0x0800144c   0x00000124   Code   RO         1618    i.led_prompt        main.o
-    0x08001570   0x08001570   0x000001fc   Code   RO         1619    i.main              main.o
-    0x0800176c   0x0800176c   0x0000007c   Code   RO         1620    i.main_menu         main.o
+    0x08001570   0x08001570   0x000001d0   Code   RO         1619    i.main              main.o
+    0x08001740   0x08001740   0x000000a8   Code   RO         1620    i.main_menu         main.o
     0x080017e8   0x080017e8   0x0000006c   Code   RO         1858    i.malloc            mc_p.l(malloc.o)
     0x08001854   0x08001854   0x0000000c   Code   RO         1621    i.motor_init        main.o
     0x08001860   0x08001860   0x000000d8   Code   RO         1622    i.operate_led       main.o
@@ -1192,18 +1196,19 @@ Memory Map of the image
     0x08001dfc   0x08001dfc   0x00000020   Data   RO         1959    Region$$Table       anon$$obj.o
 
 
-    Execution Region RW_IRAM1 (Exec base: 0x20000000, Load base: 0x08001e1c, Size: 0x00000640, Max: 0x00004000, ABSOLUTE)
+    Execution Region RW_IRAM1 (Exec base: 0x20000000, Load base: 0x08001e1c, Size: 0x00000648, Max: 0x00004000, ABSOLUTE)
 
     Exec Addr    Load Addr    Size         Type   Attr      Idx    E Section Name        Object
 
     0x20000000   0x08001e1c   0x00000004   Data   RW           16    .data               system_stm32f0xx.o
     0x20000004   0x08001e20   0x00000004   Data   RW          314    .data               stm32f0xx_hal.o
-    0x20000008   0x08001e24   0x0000002c   Data   RW         1639    .data               main.o
-    0x20000034   0x08001e50   0x00000004   Data   RW         1911    .data               mc_p.l(mvars.o)
-    0x20000038   0x08001e54   0x00000004   Data   RW         1912    .data               mc_p.l(mvars.o)
-    0x2000003c   0x08001e58   0x00000004   Data   RW         1916    .data               mc_p.l(errno.o)
-    0x20000040        -       0x00000200   Zero   RW            2    HEAP                startup_stm32f072xb.o
-    0x20000240        -       0x00000400   Zero   RW            1    STACK               startup_stm32f072xb.o
+    0x20000008   0x08001e24   0x00000030   Data   RW         1639    .data               main.o
+    0x20000038   0x08001e54   0x00000004   Data   RW         1911    .data               mc_p.l(mvars.o)
+    0x2000003c   0x08001e58   0x00000004   Data   RW         1912    .data               mc_p.l(mvars.o)
+    0x20000040   0x08001e5c   0x00000004   Data   RW         1916    .data               mc_p.l(errno.o)
+    0x20000044   0x08001e60   0x00000004   PAD
+    0x20000048        -       0x00000200   Zero   RW            2    HEAP                startup_stm32f072xb.o
+    0x20000248        -       0x00000400   Zero   RW            1    STACK               startup_stm32f072xb.o
 
 
 ==============================================================================
@@ -1213,7 +1218,7 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-      4142        872         76         44          0      28212   main.o
+      4142        846         76         48          0      28321   main.o
         28          8        192          0       1536        636   startup_stm32f072xb.o
         94         18          0          4          0       3107   stm32f0xx_hal.o
        158         22          0          0          0       9962   stm32f0xx_hal_cortex.o
@@ -1223,7 +1228,7 @@ Image component sizes
         92         16         16          4          0     412559   system_stm32f0xx.o
 
     ----------------------------------------------------------------------
-      6072       1032        316         52       1536     462083   Object Totals
+      6072       1006        316         56       1536     462192   Object Totals
          0          0         32          0          0          0   (incl. Generated)
         10          0          0          0          0          0   (incl. Padding)
 
@@ -1259,8 +1264,8 @@ Image component sizes
         22          0          0          0          0         68   fflti.o
 
     ----------------------------------------------------------------------
-      1184         48        136         12          0       1216   Library Totals
-         6          0          3          0          0          0   (incl. Padding)
+      1184         48        136         12          4       1216   Library Totals
+         6          0          3          0          4          0   (incl. Padding)
 
     ----------------------------------------------------------------------
 
@@ -1270,7 +1275,7 @@ Image component sizes
        454          0          0          0          0        392   mf_p.l
 
     ----------------------------------------------------------------------
-      1184         48        136         12          0       1216   Library Totals
+      1184         48        136         12          4       1216   Library Totals
 
     ----------------------------------------------------------------------
 
@@ -1279,15 +1284,15 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
 
-      7256       1080        452         64       1536     460547   Grand Totals
-      7256       1080        452         64       1536     460547   ELF Image Totals
-      7256       1080        452         64          0          0   ROM Totals
+      7256       1054        452         68       1540     460656   Grand Totals
+      7256       1054        452         68       1540     460656   ELF Image Totals
+      7256       1054        452         68          0          0   ROM Totals
 
 ==============================================================================
 
     Total RO  Size (Code + RO Data)                 7708 (   7.53kB)
-    Total RW  Size (RW Data + ZI Data)              1600 (   1.56kB)
-    Total ROM Size (Code + RO Data + RW Data)       7772 (   7.59kB)
+    Total RW  Size (RW Data + ZI Data)              1608 (   1.57kB)
+    Total ROM Size (Code + RO Data + RW Data)       7776 (   7.59kB)
 
 ==============================================================================
 

@@ -3,7 +3,7 @@
 <title>Static Call Graph - [Tail\Tail.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image Tail\Tail.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Thu Apr 19 16:44:29 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Thu Apr 19 17:10:53 2018
 <BR><P>
 <H3>Maximum Stack Usage =        172 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -592,13 +592,16 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[26]"></a>main</STRONG> (Thumb, 344 bytes, Stack size 8 bytes, main.o(i.main))
+<P><STRONG><a name="[26]"></a>main</STRONG> (Thumb, 360 bytes, Stack size 8 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 172<LI>Call Chain = main &rArr; SystemClock_Config &rArr; HAL_RCC_ClockConfig &rArr; HAL_RCC_GetSysClockFreq &rArr; __aeabi_uidivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[39]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Init
 <LI><a href="#[3d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uidivmod
 <LI><a href="#[5c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transmit_string
 <LI><a href="#[5d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transmit_char
+<LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tail_is_center_y
+<LI><a href="#[58]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tail_is_center_x
+<LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;proceed_to_rotate_x
 <LI><a href="#[68]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;motor_init
 <LI><a href="#[69]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main_menu
 <LI><a href="#[60]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;led_prompt
@@ -616,7 +619,7 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> entry9a.o(.ARM.Collect$$$$0000000B)
 </UL>
-<P><STRONG><a name="[69]"></a>main_menu</STRONG> (Thumb, 46 bytes, Stack size 4 bytes, main.o(i.main_menu))
+<P><STRONG><a name="[69]"></a>main_menu</STRONG> (Thumb, 56 bytes, Stack size 4 bytes, main.o(i.main_menu))
 <BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = main_menu &rArr; transmit_string
 </UL>
 <BR>[Calls]<UL><LI><a href="#[5c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transmit_string
@@ -652,7 +655,8 @@ Global Symbols
 <P><STRONG><a name="[4a]"></a>proceed_to_rotate_x</STRONG> (Thumb, 90 bytes, Stack size 8 bytes, main.o(i.proceed_to_rotate_x))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = proceed_to_rotate_x
 </UL>
-<BR>[Called By]<UL><LI><a href="#[47]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PI_update_x
+<BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[47]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PI_update_x
 </UL>
 
 <P><STRONG><a name="[4f]"></a>proceed_to_rotate_y</STRONG> (Thumb, 86 bytes, Stack size 8 bytes, main.o(i.proceed_to_rotate_y))
@@ -701,11 +705,13 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[58]"></a>tail_is_center_x</STRONG> (Thumb, 30 bytes, Stack size 0 bytes, main.o(i.tail_is_center_x))
-<BR><BR>[Called By]<UL><LI><a href="#[57]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;center_tail_x
+<BR><BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[57]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;center_tail_x
 </UL>
 
 <P><STRONG><a name="[5a]"></a>tail_is_center_y</STRONG> (Thumb, 30 bytes, Stack size 0 bytes, main.o(i.tail_is_center_y))
-<BR><BR>[Called By]<UL><LI><a href="#[59]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;center_tail_y
+<BR><BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[59]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;center_tail_y
 </UL>
 
 <P><STRONG><a name="[5d]"></a>transmit_char</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, main.o(i.transmit_char))

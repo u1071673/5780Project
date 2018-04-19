@@ -51,6 +51,7 @@
 #define DEBUG_MODE '1'
 #define LED_MODE '2'
 #define USER_MODE '3'
+#define USER_MODE '3'
 #define UP 'w'
 #define DOWN 's'
 #define RIGHT 'd'
@@ -87,6 +88,7 @@ volatile float rotations_y = 0;
 volatile float rotations_x = 0;
 volatile int rest_counts = 0;
 volatile int limitless = 0;
+volatile int tail_needs_centering = 1;
 
 typedef struct _coors {
 	unsigned char x;
@@ -936,13 +938,15 @@ void get_left_joystick_coors (coors* coordinates) {
 }
 
 void main_menu() {
-	transmit_string("\n\rSELECT MODE");
-	transmit_string("\n\r1 DEBUG Mode");
-	transmit_string("\n\r2 LED COLOR Mode");
-	transmit_string("\n\r3 USER Mode");
+	transmit_string("\n\r\tSELECT MODE");
+	transmit_string("\n\r1 \t\tDEBUG Mode");
+	transmit_string("\n\r2 \t\tLED COLOR Mode");
+	transmit_string("\n\r3 \t\tUSER Mode");
+	transmit_string("\n\r[ANY KEY] \tCenter Tail");
 	transmit_string("\n\r");
 	USART_new_data = 0;
 	received_char = 0;
+	tail_needs_centering = 1;
 	deactivate_bt();
 }
 
@@ -967,7 +971,6 @@ int main(void)
 	main_menu();
 	while (1)
 	{
-		//while(!USART_new_data); // Wait for USART new data to arrive
 		if (USART_new_data) {
 			target_rpm_x = 0;
 			transmit_char(received_char);
@@ -1003,45 +1006,38 @@ int main(void)
 						break;
 					}
 				}
-			case UP:
-				transmit_string("\tUP Pressed");
-				break;
-			case DOWN:
-				transmit_string("\tDOWN Pressed");
-				break;
-			case RIGHT:
-				transmit_string("\tRIGHT Pressed");
-				break;
-			case LEFT:				
-				transmit_string("\tLEFT Pressed");
-				break;
 			case '\n':
 			case '\r':
-				break;
-			default: // Autonomous mode.
-				transmit_string("INVALID CHARACTER: ");
-				transmit_char(received_char);
+			default:
+				transmit_string("\tCENTERING...");
 				break;
 			}
 			main_menu();
 		} else {
 			// We're in autonomous mode
-			center_tail_x();
-			center_tail_y();
-//			if(dir_right) {
-//				if(proceed_to_rotate_x()){
-//					target_rpm_x = 60;
-//				} else {
-//					target_rpm_x = -60;
-//				}
-//			} else {
-//				if(proceed_to_rotate_x()){
-//					target_rpm_x = -60;
-//				} else {
-//					target_rpm_x = 60;
-//				}
-//			}
-		
+			if(tail_needs_centering){
+				center_tail_x();
+				center_tail_y();
+				if(tail_is_center_x() && tail_is_center_y())
+					tail_needs_centering = 0;
+			} else {
+				target_rpm_y = 60;
+				if(rotations_y > 3.5f) {
+					if(dir_right) {
+						if(proceed_to_rotate_x()){
+							target_rpm_x = 60;
+						} else {
+							target_rpm_x = -60;
+						}
+					} else {
+						if(proceed_to_rotate_x()){
+							target_rpm_x = -60;
+						} else {
+							target_rpm_x = 60;
+						}
+					}
+				}
+			}
 		}
 	}
 }
