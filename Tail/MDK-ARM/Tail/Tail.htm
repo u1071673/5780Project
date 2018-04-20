@@ -3,7 +3,7 @@
 <title>Static Call Graph - [Tail\Tail.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image Tail\Tail.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Thu Apr 19 17:10:53 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060528: Last Updated: Thu Apr 19 18:16:46 2018
 <BR><P>
 <H3>Maximum Stack Usage =        172 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -527,7 +527,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[57]"></a>center_tail_x</STRONG> (Thumb, 52 bytes, Stack size 4 bytes, main.o(i.center_tail_x))
+<P><STRONG><a name="[57]"></a>center_tail_x</STRONG> (Thumb, 48 bytes, Stack size 4 bytes, main.o(i.center_tail_x))
 <BR><BR>[Stack]<UL><LI>Max Depth = 4<LI>Call Chain = center_tail_x
 </UL>
 <BR>[Calls]<UL><LI><a href="#[58]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tail_is_center_x
@@ -535,7 +535,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[59]"></a>center_tail_y</STRONG> (Thumb, 52 bytes, Stack size 4 bytes, main.o(i.center_tail_y))
+<P><STRONG><a name="[59]"></a>center_tail_y</STRONG> (Thumb, 48 bytes, Stack size 4 bytes, main.o(i.center_tail_y))
 <BR><BR>[Stack]<UL><LI>Max Depth = 4<LI>Call Chain = center_tail_y
 </UL>
 <BR>[Calls]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tail_is_center_y
@@ -592,7 +592,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[26]"></a>main</STRONG> (Thumb, 360 bytes, Stack size 8 bytes, main.o(i.main))
+<P><STRONG><a name="[26]"></a>main</STRONG> (Thumb, 376 bytes, Stack size 8 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 172<LI>Call Chain = main &rArr; SystemClock_Config &rArr; HAL_RCC_ClockConfig &rArr; HAL_RCC_GetSysClockFreq &rArr; __aeabi_uidivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[39]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Init
@@ -704,12 +704,12 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[60]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;led_prompt
 </UL>
 
-<P><STRONG><a name="[58]"></a>tail_is_center_x</STRONG> (Thumb, 30 bytes, Stack size 0 bytes, main.o(i.tail_is_center_x))
+<P><STRONG><a name="[58]"></a>tail_is_center_x</STRONG> (Thumb, 26 bytes, Stack size 0 bytes, main.o(i.tail_is_center_x))
 <BR><BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[57]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;center_tail_x
 </UL>
 
-<P><STRONG><a name="[5a]"></a>tail_is_center_y</STRONG> (Thumb, 30 bytes, Stack size 0 bytes, main.o(i.tail_is_center_y))
+<P><STRONG><a name="[5a]"></a>tail_is_center_y</STRONG> (Thumb, 26 bytes, Stack size 0 bytes, main.o(i.tail_is_center_y))
 <BR><BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[59]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;center_tail_y
 </UL>

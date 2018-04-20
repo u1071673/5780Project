@@ -386,13 +386,13 @@ int proceed_to_rotate_x() {
 }
 
 int tail_is_center_x() {
-	if(rotations_x < 0.5f && rotations_x > -0.5f)
+	if(rotations_x < 0.1f && rotations_x > -0.1f)
 		return 1;
 	return 0;
 	
 }
 int tail_is_center_y() {
-	if(rotations_y < 0.5f && rotations_y > -0.5f)
+	if(rotations_y < 0.2f && rotations_y > -0.2f)
 		return 1;
 	return 0;
 }
@@ -403,10 +403,10 @@ void center_tail_x() {
 		return;
 	}
 	if(dir_right) {
-		if(rotations_x > 0.5f)
+		if(rotations_x > 0.1f)
 				target_rpm_x = -60;
 	} else { // dir_left
-		if(rotations_x < -0.5f) {
+		if(rotations_x < -0.1f) {
 				target_rpm_x = 60;
 		}
 	}
@@ -417,10 +417,10 @@ void center_tail_y() {
 		return;
 	}
 	if(dir_up) {
-		if(rotations_y > 0.5f)
+		if(rotations_y > 0.2f)
 				target_rpm_y = -60;
 	} else { // dir_down
-		if(rotations_y < -0.5f) {
+		if(rotations_y < -0.2f) {
 				target_rpm_y = 60;
 		}
 	}
@@ -1018,22 +1018,25 @@ int main(void)
 			if(tail_needs_centering){
 				center_tail_x();
 				center_tail_y();
-				if(tail_is_center_x() && tail_is_center_y())
+				if(tail_is_center_x() && tail_is_center_y() && motor_speed_x == 0 && motor_speed_y == 0) {
 					tail_needs_centering = 0;
+					target_rpm_x = 0;
+					target_rpm_y = 0;
+				}
 			} else {
-				target_rpm_y = 60;
-				if(rotations_y > 3.5f) {
+				target_rpm_y = 80;
+				if(rotations_y > 3.45f) {
 					if(dir_right) {
 						if(proceed_to_rotate_x()){
-							target_rpm_x = 60;
+							target_rpm_x = 80;
 						} else {
-							target_rpm_x = -60;
+							target_rpm_x = -80;
 						}
 					} else {
 						if(proceed_to_rotate_x()){
-							target_rpm_x = -60;
+							target_rpm_x = -80;
 						} else {
-							target_rpm_x = 60;
+							target_rpm_x = 80;
 						}
 					}
 				}
