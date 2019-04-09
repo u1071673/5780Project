@@ -30,7 +30,7 @@ AVAILABLE TIMERS: TIM2, TIM15, TIM16, TIM17
 
 ## VERIFIED GPIO PINS (FOR GENERAL PURPOSE OUTPUT MODE)
 
-| WORKING PIN |
+| WORKING PIN (ALSO USED FOR) |
 |:----|
 | PA0 (But typically reserved for button)|
 | PA1 |
@@ -49,9 +49,9 @@ AVAILABLE TIMERS: TIM2, TIM15, TIM16, TIM17
 | PB8  | 
 | PB9  | 
 | PB10 |
-| PB11 |
+| PB11 (SDA)|
 | PB12 |
-| PB13 |
+| PB13 (SCL) |
 | PB14 | 
 | PB15 |
 | PC0 |
