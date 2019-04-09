@@ -32,12 +32,12 @@ AVAILABLE TIMERS: TIM2, TIM15, TIM16, TIM17
 
 | WORKING PIN (ALSO USED FOR) |
 |:----|
-| PA0 (But typically reserved for button)|
+| PA0 (Button)|
 | PA1 |
-| PA4 |
+| PA4 (PWM TIMER 14 CH1) |
 | PA5 |
-| PA8 |
-| PA9 |
+| PA8 (Encoder Input TIMER 1 CH1) |
+| PA9 (Encoder Input TIMER 1 CH2) |
 | PA10 |
 | PA15 |
 | PB2 |
@@ -47,7 +47,7 @@ AVAILABLE TIMERS: TIM2, TIM15, TIM16, TIM17
 | PB6  |
 | PB7  |
 | PB8  | 
-| PB9  | 
+| PB9  PWM TIMER 17 CH1 | 
 | PB10 |
 | PB11 (SDA)|
 | PB12 |
@@ -56,12 +56,12 @@ AVAILABLE TIMERS: TIM2, TIM15, TIM16, TIM17
 | PB15 |
 | PC0 |
 | PC3 |
-| PC4 |
-| PC5 |
-| PC6 |
-| PC7 |
-| PC8 |
-| PC9 |
+| PC4 (USART3_TX) |
+| PC5 (USART3_RX) |
+| PC6 (Encoder Input TIMER 3 CH1) |
+| PC7 (Encoder Input TIMER 3 CH2) |
+| PC8 (Orange LED) |
+| PC9 (Green LED) |
 | PC10 |
 | PC12 |
 | PC13 |
@@ -71,6 +71,7 @@ AVAILABLE TIMERS: TIM2, TIM15, TIM16, TIM17
 | PF1 |
 | PD2 |
 
+## STAY AWAY FROM THESE PINS! THEY'VE BEEN VERIFIED TO NOT WORK.
 | NOT WORKING|
 |:----|
 | PA2 |
