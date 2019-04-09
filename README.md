@@ -30,6 +30,8 @@ AVAILABLE TIMERS: TIM2, TIM15, TIM16, TIM17
 
 ## VERIFIED GPIO PINS (FOR GENERAL PURPOSE OUTPUT MODE)
 
+All of these pins have been verified to work on the STM32 F0 128-KBYTE 32-BIT MCU + 3-AXIS MEM SENSORS Discovery board.
+
 | WORKING PIN (ALSO USED FOR) |
 |:----|
 | PA0 (Button)|
@@ -58,8 +60,8 @@ AVAILABLE TIMERS: TIM2, TIM15, TIM16, TIM17
 | PC3 |
 | PC4 (USART3_TX) |
 | PC5 (USART3_RX) |
-| PC6 (Encoder Input TIMER 3 CH1) |
-| PC7 (Encoder Input TIMER 3 CH2) |
+| PC6 (Red LED; Encoder Input TIMER 3 CH1) |
+| PC7 (Blue LED; Encoder Input TIMER 3 CH2) |
 | PC8 (Orange LED) |
 | PC9 (Green LED) |
 | PC10 |
@@ -71,7 +73,10 @@ AVAILABLE TIMERS: TIM2, TIM15, TIM16, TIM17
 | PF1 |
 | PD2 |
 
-## STAY AWAY FROM THESE PINS! THEY'VE BEEN VERIFIED TO NOT WORK.
+#### STAY AWAY FROM THESE PINS! THEY'VE BEEN VERIFIED TO NOT WORK.
+
+All of these pins have been verified to **NOT WORK** on the STM32 F0 128-KBYTE 32-BIT MCU + 3-AXIS MEM SENSORS Discovery board.
+
 | NOT WORKING|
 |:----|
 | PA2 |
