@@ -54,9 +54,9 @@ All of these pins have been verified to work on the STM32 F0 128-KBYTE 32-BIT MC
 | PB11 (I2C2_SDA)|
 | PB12 |
 | PB13 (I2C2_SCL) |
-| PB14 | 
+| PB14 (I2C2 SLAVE ADDRESS) | 
 | PB15 |
-| PC0 |
+| PC0 (SPI/I2C2 MODE SELECT PIN) |
 | PC3 |
 | PC4 (USART3_TX) |
 | PC5 (USART3_RX) |
